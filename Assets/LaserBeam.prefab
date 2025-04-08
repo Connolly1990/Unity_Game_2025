@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 4063906592537174490}
   m_Layer: 0
   m_Name: LaserBeam
-  m_TagString: Untagged
+  m_TagString: PlayerLaser
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
