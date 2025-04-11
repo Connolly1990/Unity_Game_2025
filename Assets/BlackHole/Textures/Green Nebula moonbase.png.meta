@@ -147,7 +147,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      Green Nebula moonbase_0: 6584055899751750386
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

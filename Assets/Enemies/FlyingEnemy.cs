@@ -13,12 +13,16 @@ public class FlyingEnemy : MonoBehaviour
     public float rotationSpeed = 90f;
     public float minDistanceToPlayer = 5f;
     public float detectionRange = 12f;
-    public float flyingHeight = 3f;
+    public float heightMatchSpeed = 2f;
 
     [Header("Combat Settings")]
     public int maxHealth = 5;
     public float fireRate = 1.5f;
     public float fireRange = 10f;
+
+    [Header("Cylinder Boundaries")]
+    public float maxHeight = 10f;
+    public float minHeight = 0f;
 
     // Private variables
     private float currentAngle = 0f;
@@ -39,7 +43,6 @@ public class FlyingEnemy : MonoBehaviour
         rb.isKinematic = false;
         rb.constraints = RigidbodyConstraints.FreezeRotation;
         currentHealth = maxHealth;
-        targetHeight = flyingHeight;
 
         // Find references immediately in Awake
         cylinderTransform = GameObject.FindGameObjectWithTag("Level")?.transform;
@@ -52,6 +55,9 @@ public class FlyingEnemy : MonoBehaviour
             Vector3 toEnemy = transform.position - cylinderTransform.position;
             currentAngle = Mathf.Atan2(toEnemy.x, toEnemy.z);
         }
+
+        // Set initial target height to current height
+        targetHeight = transform.position.y;
 
         // Create firepoint if missing
         if (enemyFirePoint == null)
@@ -138,10 +144,6 @@ public class FlyingEnemy : MonoBehaviour
         {
             // Reset local rotation first
             enemyModel.localRotation = Quaternion.identity;
-
-            // Apply specific model adjustments if needed
-            // Uncomment and adjust as needed for your specific model:
-            // enemyModel.localRotation = Quaternion.Euler(0, 0, 0);
         }
     }
 
@@ -210,10 +212,9 @@ public class FlyingEnemy : MonoBehaviour
                 currentAngle += moveDirection * moveSpeed * Time.fixedDeltaTime / cylinderRadius;
             }
 
-            // Try to match player's height with some smoothing
-            targetHeight = Mathf.Lerp(targetHeight, playerTransform.position.y, Time.fixedDeltaTime * 0.5f);
-            // Ensure we maintain minimum flying height
-            targetHeight = Mathf.Max(targetHeight, flyingHeight);
+            // Match player's height with smoothing (FIXED: no more automatic upwards drift)
+            float playerHeight = Mathf.Clamp(playerTransform.position.y, minHeight, maxHeight);
+            targetHeight = Mathf.Lerp(targetHeight, playerHeight, Time.fixedDeltaTime * heightMatchSpeed);
 
             // Update position
             UpdatePositionAndRotation();
@@ -229,7 +230,10 @@ public class FlyingEnemy : MonoBehaviour
         {
             // Patrol behavior when player not detected
             currentAngle += moveSpeed * 0.5f * Time.fixedDeltaTime / cylinderRadius;
-            targetHeight = flyingHeight; // Return to default height
+
+            // FIXED: Keep current height when patrolling, don't change it
+            // This prevents unwanted vertical drifting
+
             UpdatePositionAndRotation();
         }
 
@@ -240,6 +244,9 @@ public class FlyingEnemy : MonoBehaviour
     void UpdatePositionAndRotation()
     {
         if (cylinderTransform == null) return;
+
+        // Clamp height to cylinder bounds
+        targetHeight = Mathf.Clamp(targetHeight, minHeight, maxHeight);
 
         // Calculate new position on cylinder surface
         Vector3 targetPosition = cylinderTransform.position + new Vector3(
@@ -442,5 +449,11 @@ public class FlyingEnemy : MonoBehaviour
             Gizmos.DrawLine(enemyFirePoint.position, projectedFirePoint);
             Gizmos.DrawWireSphere(projectedFirePoint, 0.2f);
         }
+
+        // Show height constraints
+        Gizmos.color = Color.cyan;
+        Vector3 minPos = new Vector3(cylinderPos.x, minHeight, cylinderPos.z);
+        Vector3 maxPos = new Vector3(cylinderPos.x, maxHeight, cylinderPos.z);
+        Gizmos.DrawLine(minPos, maxPos);
     }
 }

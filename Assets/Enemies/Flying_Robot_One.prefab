@@ -183,18 +183,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ab7a4af869ddf3046ad260ca6072f8b7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cylinderTransform: {fileID: 0}
   enemyModel: {fileID: 8707136470080423477}
-  playerTransform: {fileID: 0}
   laserPrefab: {fileID: 2597666852404115660, guid: 655afc460289a754bb641e8f1e72c6a5, type: 3}
   enemyFirePoint: {fileID: 4196703558414068922}
   moveSpeed: 3
   rotationSpeed: 90
   minDistanceToPlayer: 5
   detectionRange: 12
+  heightMatchSpeed: 1
   maxHealth: 5
-  fireRate: 1.5
+  fireRate: 2
   fireRange: 10
+  maxHeight: 6
+  minHeight: 2
 --- !u!4 &8707136470080423477 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: f56cd91db9a927a4ebf492d16af0b880, type: 3}
