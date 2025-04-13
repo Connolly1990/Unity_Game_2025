@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 4186364203905742569}
   - component: {fileID: 2795128722172502455}
   - component: {fileID: 3516470263018604848}
-  - component: {fileID: 4188606875284658079}
+  - component: {fileID: 3384955154628205392}
   m_Layer: 0
   m_Name: ExploderEnemy
   m_TagString: Enemy
@@ -137,7 +137,7 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &4188606875284658079
+--- !u!114 &3384955154628205392
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -146,21 +146,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 9117418471015216478}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c3b2e465af134c24cb90405165576b21, type: 3}
+  m_Script: {fileID: 11500000, guid: 0d041d92633c2b24c8510b5a23c387a8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enemyType: 2
   health: 3
-  moveSpeed: 3
-  attackRange: 20
-  damageAmount: 1
-  stopDistance: 3
-  flyingHeight: 3
-  projectilePrefab: {fileID: 2597666852404115660, guid: 655afc460289a754bb641e8f1e72c6a5, type: 3}
-  attackCooldown: 2
-  shotAccuracy: 0.8
-  shotsPerVolley: 1
-  angleBetweenShots: 15
+  moveSpeed: 5
+  damageAmount: 2
+  flyingHeight: 2
+  explosionDistance: 2
   blinkFrequency: 0.5
   explosionRadius: 5
   fadeDuration: 0.2

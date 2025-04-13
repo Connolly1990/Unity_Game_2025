@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 1465389976734646154}
   - component: {fileID: 9006854986562786214}
   - component: {fileID: 8443652510731791309}
-  - component: {fileID: 5862887453404790819}
+  - component: {fileID: 8947835487535148967}
   m_Layer: 0
   m_Name: GroundEnemy
   m_TagString: Enemy
@@ -137,7 +137,7 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &5862887453404790819
+--- !u!114 &8947835487535148967
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -146,21 +146,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 7952307557708109022}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c3b2e465af134c24cb90405165576b21, type: 3}
+  m_Script: {fileID: 11500000, guid: c98a521573e5b09458d3b8031e319079, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enemyType: 0
-  health: 5
+  health: 3
   moveSpeed: 3
   attackRange: 10
   damageAmount: 1
   stopDistance: 3
-  flyingHeight: 3
-  projectilePrefab: {fileID: 2597666852404115660, guid: 655afc460289a754bb641e8f1e72c6a5, type: 3}
+  laserPrefab: {fileID: 2597666852404115660, guid: 655afc460289a754bb641e8f1e72c6a5, type: 3}
   attackCooldown: 2
   shotAccuracy: 0.8
-  shotsPerVolley: 1
+  shotsPerVolley: 3
   angleBetweenShots: 15
-  blinkFrequency: 0.5
-  explosionRadius: 5
-  fadeDuration: 0.2
