@@ -278,28 +278,27 @@ public class FlyingEnemy : MonoBehaviour
         if (enemyFirePoint == null || laserPrefab == null || playerTransform == null || cylinderTransform == null) return;
 
         // Get the tangent direction at our position
-        Vector3 toCenter = cylinderTransform.position - transform.position;
+        Vector3 toCenter = transform.position - cylinderTransform.position;
         toCenter.y = 0;
         Vector3 tangent = Vector3.Cross(Vector3.up, toCenter.normalized).normalized;
 
         // Fire in the direction we're facing
         Vector3 laserDir = tangent * facingDirection;
 
-        // Make sure the fire point is projected onto the cylinder before spawning
-        Vector3 projectedFirePoint = ProjectPointToCylinder(enemyFirePoint.position);
+        // Make sure the fire point is positioned on the cylinder
+        Vector3 firePointPosition = ProjectPointToCylinder(enemyFirePoint.position);
 
         // Create the laser with proper orientation
-        GameObject laser = Instantiate(laserPrefab, projectedFirePoint, Quaternion.LookRotation(laserDir, Vector3.up));
+        GameObject laser = Instantiate(laserPrefab, firePointPosition, Quaternion.LookRotation(laserDir, Vector3.up));
 
         // Initialize laser with cylinder reference and direction
-        LaserProjectile laserProjectile = laser.GetComponent<LaserProjectile>();
-        if (laserProjectile != null)
+        EnemyLaser enemyLaser = laser.GetComponent<EnemyLaser>();
+        if (enemyLaser != null)
         {
-            laserProjectile.Initialize(cylinderTransform, laserDir);
-            laser.tag = "EnemyLaser";
+            // Use the same speed as player's laser, ensure proper initialization
+            enemyLaser.Initialize(cylinderTransform, laserDir, 15f, 1, false);
         }
     }
-
     // Helper to project any point onto the cylinder surface (keeping Y)
     Vector3 ProjectPointToCylinder(Vector3 point)
     {

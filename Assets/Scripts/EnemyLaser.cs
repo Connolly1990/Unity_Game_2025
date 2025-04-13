@@ -1,5 +1,5 @@
 using UnityEngine;
-[RequireComponent(typeof(Rigidbody))]
+
 public class EnemyLaser : MonoBehaviour
 {
     public float speed = 15f;
@@ -13,20 +13,34 @@ public class EnemyLaser : MonoBehaviour
     private Vector3 movementDirection;
     private float currentAngle;
     private float initialHeight;
-    private Rigidbody rb;
     private float currentLifetime;
 
     private void Awake()
     {
-        rb = GetComponent<Rigidbody>();
-        rb.useGravity = false;
-        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        // Add collider if missing
         if (GetComponent<Collider>() == null)
         {
-            SphereCollider collider = gameObject.AddComponent<SphereCollider>();
+            CapsuleCollider collider = gameObject.AddComponent<CapsuleCollider>();
             collider.isTrigger = true;
-            collider.radius = 0.2f;
+            collider.radius = 0.1f;
+            collider.height = 1f;
+            collider.direction = 2; // Z-axis oriented
         }
+    }
+
+    private void Start()
+    {
+        // Set up proper layer collision ignoring for Level
+        int laserLayer = gameObject.layer;
+        int levelLayer = LayerMask.NameToLayer("Level");
+
+        if (levelLayer != -1) // Make sure the Level layer exists
+        {
+            Physics.IgnoreLayerCollision(laserLayer, levelLayer, true);
+        }
+
+        // Set tag for identification
+        gameObject.tag = isPlayerProjectile ? "PlayerLaser" : "EnemyLaser";
     }
 
     public void Initialize(Transform cylinder, Vector3 direction, float projectileSpeed, int projectileDamage, bool fromPlayer)
@@ -38,79 +52,77 @@ public class EnemyLaser : MonoBehaviour
         damage = projectileDamage;
         isPlayerProjectile = fromPlayer;
         currentLifetime = 0f;
+        initialHeight = transform.position.y;
 
         // Calculate initial angle on cylinder
         Vector3 toCenter = transform.position - cylinderTransform.position;
         toCenter.y = 0; // Ensure we're working in the XZ plane
         currentAngle = Mathf.Atan2(toCenter.x, toCenter.z);
-        initialHeight = transform.position.y;
-
-        // Set initial rotation to match movement direction
-        Vector3 tangent = Vector3.Cross(toCenter.normalized, Vector3.up);
-        float directionSign = Mathf.Sign(Vector3.Dot(movementDirection, tangent));
-        transform.rotation = Quaternion.LookRotation(tangent * directionSign, Vector3.up);
-
-        Destroy(gameObject, lifetime);
     }
 
-    private void FixedUpdate()
+    void Update()
     {
-        currentLifetime += Time.fixedDeltaTime;
+        currentLifetime += Time.deltaTime;
+        if (currentLifetime >= lifetime)
+        {
+            Destroy(gameObject);
+            return;
+        }
         MoveAlongCylinder();
     }
 
-    private void MoveAlongCylinder()
+    void MoveAlongCylinder()
     {
-        // Calculate the tangent direction at current position
-        Vector3 toCenter = transform.position - cylinderTransform.position;
-        toCenter.y = 0; // Ensure we're working in the XZ plane
-        Vector3 tangent = Vector3.Cross(toCenter.normalized, Vector3.up);
+        // Calculate movement in cylinder space
+        float angleDelta = (speed * Time.deltaTime) / cylinderRadius;
 
-        // Determine direction along tangent based on initial movement direction
-        float directionSign = Mathf.Sign(Vector3.Dot(movementDirection, tangent));
+        // Use the dot product to determine the correct sign
+        float directionSign = Mathf.Sign(Vector3.Dot(movementDirection,
+                      Vector3.Cross(Vector3.up, cylinderTransform.position - transform.position)));
 
-        // Calculate angle change based on speed
-        float angleDelta = (speed * Time.fixedDeltaTime) / cylinderRadius;
         currentAngle += angleDelta * directionSign;
 
-        // Calculate new position on cylinder surface
-        Vector3 newPosition = cylinderTransform.position + new Vector3(
-            cylinderRadius * Mathf.Sin(currentAngle),
-            initialHeight,
-            cylinderRadius * Mathf.Cos(currentAngle)
-        );
+        // Update position while staying on cylinder
+        Vector3 newPosition = cylinderTransform.position;
+        newPosition.x += cylinderRadius * Mathf.Sin(currentAngle);
+        newPosition.z += cylinderRadius * Mathf.Cos(currentAngle);
+        newPosition.y = initialHeight; // Maintain original height
 
-        // Update tangent direction for new position
-        Vector3 newToCenter = newPosition - cylinderTransform.position;
-        newToCenter.y = 0;
-        Vector3 newTangent = Vector3.Cross(newToCenter.normalized, Vector3.up);
+        transform.position = newPosition;
 
-        // Use physics to move (prevents teleporting)
-        rb.MovePosition(newPosition);
-        rb.MoveRotation(Quaternion.LookRotation(newTangent * directionSign, Vector3.up));
+        // Rotate to face movement direction (tangent to cylinder)
+        Vector3 tangent = new Vector3(Mathf.Cos(currentAngle), 0, -Mathf.Sin(currentAngle));
+        if (directionSign < 0) tangent = -tangent;
+
+        transform.rotation = Quaternion.LookRotation(tangent, Vector3.up);
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        // Skip collision with self or same type
-        if ((isPlayerProjectile && other.CompareTag("Player")) ||
-            (!isPlayerProjectile && other.CompareTag("Enemy")))
+        // Skip collision with Level
+        if (other.CompareTag("Level"))
+        {
+            return;
+        }
+
+        // Skip collision with Enemy objects
+        if (other.CompareTag("Enemy"))
+        {
+            return;
+        }
+
+        // Skip collision with self
+        if ((isPlayerProjectile && other.CompareTag("Player")))
         {
             return;
         }
 
         // Handle player hit
-        if (!isPlayerProjectile && other.CompareTag("Player"))
+        if (other.CompareTag("Player"))
         {
+            Debug.Log($"Enemy Laser hit Player");
             PlayerHealth playerHealth = other.GetComponent<PlayerHealth>();
             if (playerHealth != null) playerHealth.TakeDamage(damage);
-        }
-
-        // Handle enemy hit
-        if (isPlayerProjectile && other.CompareTag("Enemy"))
-        {
-            EnemyController enemy = other.GetComponent<EnemyController>();
-            if (enemy != null) enemy.TakeDamage(damage);
         }
 
         // Create impact effect
