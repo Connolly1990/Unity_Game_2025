@@ -149,11 +149,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0d041d92633c2b24c8510b5a23c387a8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  health: 3
+  enemyModel: {fileID: 6189445868922512273}
+  maxHealth: 2
   moveSpeed: 5
   damageAmount: 2
   flyingHeight: 2
   explosionDistance: 2
+  detectionRange: 15
+  rotationSpeed: 120
+  heightMatchSpeed: 3
   blinkFrequency: 0.5
   explosionRadius: 5
   fadeDuration: 0.2
+  maxHeight: 6
+  minHeight: 1.5

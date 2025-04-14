@@ -1,5 +1,36 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &7551141431499035017
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4589403858293105969}
+  m_Layer: 0
+  m_Name: EnemyFirePoint2
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4589403858293105969
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7551141431499035017}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2239603001391577291}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7952307557708109022
 GameObject:
   m_ObjectHideFlags: 0
@@ -33,7 +64,8 @@ Transform:
   m_LocalPosition: {x: -30.381155, y: 2.979729, z: -2.887864}
   m_LocalScale: {x: 2.8906, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 4589403858293105969}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &6569484511051021956
@@ -149,13 +181,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c98a521573e5b09458d3b8031e319079, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  health: 3
-  moveSpeed: 3
-  attackRange: 10
-  damageAmount: 1
-  stopDistance: 3
+  enemyModel: {fileID: 2239603001391577291}
   laserPrefab: {fileID: 2597666852404115660, guid: 655afc460289a754bb641e8f1e72c6a5, type: 3}
-  attackCooldown: 2
+  enemyFirePoint: {fileID: 4589403858293105969}
+  maxHealth: 3
+  moveSpeed: 3
+  rotationSpeed: 90
+  stopDistance: 3
+  detectionRange: 12
+  preferredHeight: -10
+  heightAdjustSpeed: 2
+  attackRange: 10
+  fireRate: 2
   shotAccuracy: 0.8
   shotsPerVolley: 3
   angleBetweenShots: 15
+  maxHeight: 3
+  minHeight: 0
