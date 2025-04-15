@@ -152,7 +152,7 @@ MonoBehaviour:
   enemyModel: {fileID: 6189445868922512273}
   cylinderTransform: {fileID: 2305134345780331110, guid: fd63df1fdc8762e4f968123dcffc8366, type: 3}
   middleGuideline: {fileID: 2837066791173130840, guid: e796576cdfd75884cacc5d8d2a29649e, type: 3}
-  maxHealth: 2
+  maxHealth: 4
   damageAmount: 2
   moveSpeed: 5
   chargeSpeed: 7

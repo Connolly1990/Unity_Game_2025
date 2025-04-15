@@ -186,12 +186,12 @@ MonoBehaviour:
   enemyModel: {fileID: 8707136470080423477}
   laserPrefab: {fileID: 2597666852404115660, guid: 655afc460289a754bb641e8f1e72c6a5, type: 3}
   enemyFirePoint: {fileID: 4196703558414068922}
-  moveSpeed: 5
+  moveSpeed: 4
   rotationSpeed: 90
-  minDistanceToPlayer: 3
+  minDistanceToPlayer: 5
   detectionRange: 15
   heightMatchSpeed: 1
-  maxHealth: 5
+  maxHealth: 3
   fireRate: 10
   fireRange: 10
   maxHeight: 6
