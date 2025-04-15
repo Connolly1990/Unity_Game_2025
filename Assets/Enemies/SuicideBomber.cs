@@ -6,67 +6,62 @@ public class SuicideBomber : MonoBehaviour
 {
     [Header("References")]
     public Transform enemyModel;
+    public Transform cylinderTransform; // Reference to the cylinder
+    public Transform middleGuideline;   // Reference to the guideline
 
     [Header("Basic Stats")]
     public int maxHealth = 2;
-    public float moveSpeed = 5f; // Usually faster than other enemies
     public int damageAmount = 2; // Higher damage since it's a suicide attack
 
     [Header("Movement Settings")]
-    public float explosionDistance = 2f; // Distance at which it explodes
-    public float detectionRange = 15f; // Usually larger detection range
-    public float rotationSpeed = 120f; // Faster rotation for quick targeting
-    public float verticalSpeed = 2f; // Speed at which it moves vertically
+    public float moveSpeed = 5f;             // Regular patrol speed
+    public float chargeSpeed = 7f;           // Speed when charging at player
+    public float detectionRange = 15f;       // Detection angle in degrees
+    public float explosionDistance = 2f;     // Distance at which it explodes
+    public float explosionDelay = 1.5f;      // Time before explosion
 
     [Header("Explosion Settings")]
     public float blinkFrequency = 0.5f;
     public float explosionRadius = 5f;
     public float fadeDuration = 0.2f;
-
-    [Header("Cylinder Boundaries")]
-    public float maxHeight = 7f;
-    public float minHeight = 1.5f;
+    public GameObject explosionEffectPrefab;
 
     // Private variables
     private Transform playerTransform;
-    private Transform cylinderTransform;
     private float cylinderRadius;
     private float currentAngle;
-    private bool isBlinking = false;
     private Renderer[] enemyRenderers;
     private Color[] originalColors;
     private Rigidbody rb;
     private int currentHealth;
-    private float facingDirection = 1f;  // 1 or -1 for direction on tangent
-    private Vector3 currentPosition;
-    private bool isExploding = false;
+    private bool isBlinking = false;
+    private bool movingLeft = true;         // Direction along the guideline
+    private bool chargingAtPlayer = false;  // Whether actively pursuing the player
+    private bool isExploding = false;       // Whether in explosion sequence
+    private float explosionTimer = 0f;      // Countdown to explosion
 
     private void Awake()
     {
-        // Store initial position
-        currentPosition = transform.position;
-
         // Setup rigidbody
         rb = GetComponent<Rigidbody>();
         rb.useGravity = false;
-        rb.isKinematic = false;
-        rb.constraints = RigidbodyConstraints.FreezeRotation;
+        rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
 
-        // Find references
-        playerTransform = GameObject.FindGameObjectWithTag("Player")?.transform;
-        cylinderTransform = GameObject.FindGameObjectWithTag("Level")?.transform;
+        // Find references if not set
+        if (playerTransform == null)
+            playerTransform = GameObject.FindGameObjectWithTag("Player")?.transform;
+
+        if (cylinderTransform == null)
+            cylinderTransform = GameObject.FindGameObjectWithTag("Level")?.transform;
+
+        if (middleGuideline == null && cylinderTransform != null)
+        {
+            // Try to find guideline as child of cylinder
+            middleGuideline = cylinderTransform.Find("MiddleGuideline");
+        }
 
         // Initialize health
         currentHealth = maxHealth;
-
-        if (cylinderTransform != null)
-        {
-            cylinderRadius = cylinderTransform.localScale.x * 0.5f;
-
-            // Calculate initial angle based on current position
-            Vector3 toEnemy = transform.position - cylinderTransform.position;
-            currentAngle = Mathf.Atan2(toEnemy.x, toEnemy.z);
-        }
 
         // Setup renderers
         enemyRenderers = GetComponentsInChildren<Renderer>();
@@ -75,14 +70,11 @@ public class SuicideBomber : MonoBehaviour
         {
             originalColors[i] = enemyRenderers[i].material.color;
         }
-
-        // Start blinking effect
-        StartCoroutine(BlinkRoutine());
     }
 
     private void Start()
     {
-        // Double check references if somehow missed in Awake
+        // Double check references
         if (cylinderTransform == null)
         {
             GameObject levelObject = GameObject.FindGameObjectWithTag("Level");
@@ -114,116 +106,134 @@ public class SuicideBomber : MonoBehaviour
         {
             cylinderRadius = cylinderTransform.localScale.x * 0.5f;
 
-            // If we're too far from the cylinder, project onto it
-            float distanceToCenter = Vector3.Distance(
-                new Vector3(transform.position.x, cylinderTransform.position.y, transform.position.z),
-                new Vector3(cylinderTransform.position.x, cylinderTransform.position.y, cylinderTransform.position.z)
-            );
-
-            if (Mathf.Abs(distanceToCenter - cylinderRadius) > 0.5f)
+            // Initialize position on middle rail if available
+            if (middleGuideline != null)
             {
-                // We're not on the cylinder surface, fix position
-                Vector3 towardCenter = cylinderTransform.position - transform.position;
-                towardCenter.y = 0;
-                towardCenter.Normalize();
-
-                Vector3 newPos = cylinderTransform.position - towardCenter * cylinderRadius;
-                newPos.y = transform.position.y;
-                currentPosition = newPos;
-                transform.position = newPos;
+                transform.position = new Vector3(transform.position.x, middleGuideline.position.y, transform.position.z);
             }
+
+            // Initialize random starting angle
+            currentAngle = Random.Range(0f, 2f * Mathf.PI);
+            UpdatePositionAndRotation(true);
         }
+
+        // Start blinking effect
+        StartCoroutine(BlinkRoutine());
     }
 
     private void FixedUpdate()
     {
-        if (playerTransform == null || cylinderTransform == null || isExploding) return;
+        if (playerTransform == null || cylinderTransform == null) return;
 
-        // Calculate player angle on cylinder
-        float playerAngle = Mathf.Atan2(
-            playerTransform.position.x - cylinderTransform.position.x,
-            playerTransform.position.z - cylinderTransform.position.z
-        );
-
-        // Calculate angular distance to player (shortest path)
-        float angleDiff = Mathf.DeltaAngle(currentAngle * Mathf.Rad2Deg, playerAngle * Mathf.Rad2Deg) * Mathf.Deg2Rad;
-
-        // Calculate actual distance to player along cylinder
-        float distanceToPlayer = Mathf.Abs(angleDiff * cylinderRadius);
-
-        // Calculate vertical distance
-        float verticalDist = Mathf.Abs(transform.position.y - playerTransform.position.y);
-
-        // Combine distances for full detection
-        float combinedDistance = Mathf.Sqrt(distanceToPlayer * distanceToPlayer + verticalDist * verticalDist);
-
-        // Create vectors for current position and player position on cylinder
-        Vector3 currentPosOnCylinder = cylinderTransform.position + new Vector3(
-            cylinderRadius * Mathf.Sin(currentAngle),
-            transform.position.y,
-            cylinderRadius * Mathf.Cos(currentAngle)
-        );
-
-        Vector3 playerPosOnCylinder = cylinderTransform.position + new Vector3(
-            cylinderRadius * Mathf.Sin(playerAngle),
-            playerTransform.position.y,
-            cylinderRadius * Mathf.Cos(playerAngle)
-        );
-
-        // Get tangent at our position
-        Vector3 toCenter = cylinderTransform.position - currentPosOnCylinder;
-        toCenter.y = 0;
-        Vector3 tangent = Vector3.Cross(Vector3.up, toCenter.normalized).normalized;
-
-        // Calculate relative position to determine which way to face
-        Vector3 toPlayer = playerPosOnCylinder - currentPosOnCylinder;
-        float dot = Vector3.Dot(tangent, toPlayer);
-
-        // Set facing direction based on where player is
-        facingDirection = (dot >= 0) ? 1f : -1f;
-
-        // Check if close enough to explode
-        if (combinedDistance <= explosionDistance)
+        if (isExploding)
         {
-            Explode();
+            HandleExplosion();
             return;
         }
 
-        // Move towards player horizontally
-        float moveDirection = Mathf.Sign(angleDiff);
-        currentAngle += moveDirection * moveSpeed * Time.fixedDeltaTime / cylinderRadius;
-
-        // Determine vertical movement direction
-        float verticalDirection = 0;
-        if (Mathf.Abs(transform.position.y - playerTransform.position.y) > 0.1f)
+        if (playerTransform != null)
         {
-            verticalDirection = playerTransform.position.y > transform.position.y ? 1 : -1;
+            DetectPlayer();
         }
 
-        // Apply vertical movement
-        float newY = transform.position.y + (verticalDirection * verticalSpeed * Time.fixedDeltaTime);
-        newY = Mathf.Clamp(newY, minHeight, maxHeight);
+        MoveEnemy();
+        UpdatePositionAndRotation();
+    }
 
-        // Update position without teleportation
-        Vector3 newPositionOnCylinder = cylinderTransform.position + new Vector3(
-            cylinderRadius * Mathf.Sin(currentAngle),
-            newY,
-            cylinderRadius * Mathf.Cos(currentAngle)
+    void DetectPlayer()
+    {
+        // Get player angle on cylinder
+        float playerAngle = Mathf.Atan2(
+            playerTransform.position.z - cylinderTransform.position.z,
+            playerTransform.position.x - cylinderTransform.position.x
         );
 
-        // Calculate facing direction
-        Vector3 facingDir = tangent * facingDirection;
+        // Normalize angles for comparison
+        float wrappedCurrentAngle = currentAngle % (2f * Mathf.PI);
+        if (wrappedCurrentAngle < 0) wrappedCurrentAngle += 2f * Mathf.PI;
 
-        // Calculate target rotation
-        Quaternion targetRotation = Quaternion.LookRotation(facingDir, Vector3.up);
+        float wrappedPlayerAngle = playerAngle % (2f * Mathf.PI);
+        if (wrappedPlayerAngle < 0) wrappedPlayerAngle += 2f * Mathf.PI;
 
-        // Smoothly update position and rotation
-        currentPosition = Vector3.Lerp(transform.position, newPositionOnCylinder, 0.5f);
-        transform.position = currentPosition;
-        transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+        // Calculate angle difference in degrees
+        float angleDifference = Mathf.Abs(wrappedCurrentAngle - wrappedPlayerAngle) * Mathf.Rad2Deg;
+        if (angleDifference > 180f)
+            angleDifference = 360f - angleDifference;
+
+        // Calculate distance to player for explosion check
+        float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
+
+        // Check if close enough to explode
+        if (distanceToPlayer <= explosionDistance)
+        {
+            StartExplosion();
+            return;
+        }
+
+        // If charging at player, continuously update direction
+        if (chargingAtPlayer)
+        {
+            // Determine if player is to the left or right
+            float clockwiseDifference = (wrappedPlayerAngle - wrappedCurrentAngle + 2f * Mathf.PI) % (2f * Mathf.PI);
+            movingLeft = clockwiseDifference < Mathf.PI;
+            return;
+        }
+
+        // If player is within detection range
+        if (angleDifference < detectionRange)
+        {
+            // Start charging at player
+            chargingAtPlayer = true;
+
+            // Visual indication that bomber detected player
+            foreach (Renderer renderer in enemyRenderers)
+            {
+                renderer.material.color = Color.red;
+            }
+        }
+    }
+
+    void MoveEnemy()
+    {
+        float speed = chargingAtPlayer ? chargeSpeed : moveSpeed;
+
+        // Move along the rail
+        if (movingLeft)
+        {
+            currentAngle += speed * Time.fixedDeltaTime / cylinderRadius;
+        }
+        else
+        {
+            currentAngle -= speed * Time.fixedDeltaTime / cylinderRadius;
+        }
 
         // Normalize angle to prevent overflow
         currentAngle = Mathf.Repeat(currentAngle, 2f * Mathf.PI);
+    }
+
+    void UpdatePositionAndRotation(bool snap = false)
+    {
+        // Calculate position on cylinder (relative to cylinder position)
+        float x = cylinderTransform.position.x + cylinderRadius * Mathf.Sin(currentAngle);
+        float z = cylinderTransform.position.z + cylinderRadius * Mathf.Cos(currentAngle);
+        Vector3 targetPosition = new Vector3(x, middleGuideline ? middleGuideline.position.y : transform.position.y, z);
+
+        // Update the enemy's position on the cylinder
+        if (snap)
+        {
+            transform.position = targetPosition;
+        }
+        else
+        {
+            rb.MovePosition(targetPosition);
+        }
+
+        // Make enemy face tangent to the cylinder (direction of movement)
+        Vector3 tangent = new Vector3(Mathf.Cos(currentAngle), 0f, -Mathf.Sin(currentAngle));
+        if (movingLeft)
+            tangent = -tangent;
+
+        transform.forward = tangent;
     }
 
     private IEnumerator BlinkRoutine()
@@ -296,49 +306,99 @@ public class SuicideBomber : MonoBehaviour
         }
     }
 
-    private void Explode()
+    void StartExplosion()
     {
-        if (isExploding) return;
         isExploding = true;
+        explosionTimer = explosionDelay;
 
+        // Stop all movement
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+
+        // Visual indication that bomber is about to explode
+        foreach (Renderer renderer in enemyRenderers)
+        {
+            renderer.material.color = Color.yellow;
+        }
+    }
+
+    void HandleExplosion()
+    {
+        explosionTimer -= Time.fixedDeltaTime;
+
+        // Flash effect as countdown progresses
+        if ((explosionTimer * 4f) % 0.5f < 0.25f)
+        {
+            foreach (Renderer renderer in enemyRenderers)
+            {
+                renderer.material.color = Color.yellow;
+            }
+        }
+        else
+        {
+            foreach (Renderer renderer in enemyRenderers)
+            {
+                renderer.material.color = Color.red;
+            }
+        }
+
+        if (explosionTimer <= 0)
+        {
+            Explode();
+        }
+    }
+
+    void Explode()
+    {
         // Create explosion effect
-        GameObject explosion = new GameObject("ExplosionEffect");
-        explosion.transform.position = transform.position;
+        if (explosionEffectPrefab != null)
+        {
+            Instantiate(explosionEffectPrefab, transform.position, Quaternion.identity);
+        }
+        else
+        {
+            // Fallback explosion effect if no prefab is assigned
+            GameObject explosion = new GameObject("ExplosionEffect");
+            explosion.transform.position = transform.position;
 
-        // Add particle system component
-        ParticleSystem explosionPS = explosion.AddComponent<ParticleSystem>();
+            // Add particle system component
+            ParticleSystem explosionPS = explosion.AddComponent<ParticleSystem>();
 
-        // Configure main module
-        var main = explosionPS.main;
-        main.startColor = new ParticleSystem.MinMaxGradient(Color.yellow, Color.red);
-        main.startSize = explosionRadius * 0.4f;
-        main.startLifetime = 0.5f;
-        main.startSpeed = explosionRadius * 0.8f;
-        main.duration = 0.3f;
-        main.loop = false;
+            // Configure main module
+            var main = explosionPS.main;
+            main.startColor = new ParticleSystem.MinMaxGradient(Color.yellow, Color.red);
+            main.startSize = explosionRadius * 0.4f;
+            main.startLifetime = 0.5f;
+            main.startSpeed = explosionRadius * 0.8f;
+            main.duration = 0.3f;
+            main.loop = false;
 
-        // Configure emission
-        var emission = explosionPS.emission;
-        emission.rateOverTime = 0;
-        emission.SetBursts(new ParticleSystem.Burst[]{
-            new ParticleSystem.Burst(0f, 30f)
-        });
+            // Configure emission
+            var emission = explosionPS.emission;
+            emission.rateOverTime = 0;
+            emission.SetBursts(new ParticleSystem.Burst[]{
+                new ParticleSystem.Burst(0f, 30f)
+            });
 
-        // Configure shape
-        var shape = explosionPS.shape;
-        shape.shapeType = ParticleSystemShapeType.Sphere;
-        shape.radius = 0.1f;
+            // Configure shape
+            var shape = explosionPS.shape;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 0.1f;
 
-        // Add explosion light
-        GameObject lightObj = new GameObject("ExplosionLight");
-        lightObj.transform.parent = explosion.transform;
-        Light explosionLight = lightObj.AddComponent<Light>();
-        explosionLight.color = new Color(1f, 0.7f, 0f);
-        explosionLight.intensity = 3f;
-        explosionLight.range = explosionRadius * 1.5f;
+            // Add explosion light
+            GameObject lightObj = new GameObject("ExplosionLight");
+            lightObj.transform.parent = explosion.transform;
+            Light explosionLight = lightObj.AddComponent<Light>();
+            explosionLight.color = new Color(1f, 0.7f, 0f);
+            explosionLight.intensity = 3f;
+            explosionLight.range = explosionRadius * 1.5f;
 
-        // Animate light fade out
-        StartCoroutine(FadeExplosionLight(explosionLight, 0.5f));
+            // Animate light fade out
+            StartCoroutine(FadeExplosionLight(explosionLight, 0.5f));
+
+            // Destroy explosion after effect completes
+            Destroy(explosion, 2f);
+        }
 
         // Damage the player if within explosion radius
         Collider[] hits = Physics.OverlapSphere(transform.position, explosionRadius);
@@ -352,10 +412,16 @@ public class SuicideBomber : MonoBehaviour
                     playerHealth.TakeDamage(damageAmount);
                 }
             }
+
+            // Apply explosion force to rigidbodies (except the bomber itself)
+            Rigidbody hitRb = hit.GetComponent<Rigidbody>();
+            if (hitRb != null && hitRb != rb)
+            {
+                hitRb.AddExplosionForce(explosionRadius * 2, transform.position, explosionRadius);
+            }
         }
 
-        // Destroy explosion and enemy
-        Destroy(explosion, 2f);
+        // Destroy the bomber
         Destroy(gameObject);
     }
 
@@ -383,31 +449,28 @@ public class SuicideBomber : MonoBehaviour
 
         if (currentHealth <= 0)
         {
-            Explode(); // Suicide bomber explodes when killed
+            StartExplosion(); // Suicide bomber explodes when killed
         }
     }
 
     private IEnumerator DamageFlash()
     {
-        // Get renderers
-        Renderer[] renderers = GetComponentsInChildren<Renderer>();
-        Color[] originalColors = new Color[renderers.Length];
-
         // Store original colors and set to red
-        for (int i = 0; i < renderers.Length; i++)
+        Color[] tempColors = new Color[enemyRenderers.Length];
+        for (int i = 0; i < enemyRenderers.Length; i++)
         {
-            originalColors[i] = renderers[i].material.color;
-            renderers[i].material.color = Color.red;
+            tempColors[i] = enemyRenderers[i].material.color;
+            enemyRenderers[i].material.color = Color.red;
         }
 
         yield return new WaitForSeconds(0.1f);
 
-        // Restore original colors
-        for (int i = 0; i < renderers.Length; i++)
+        // Restore colors
+        for (int i = 0; i < enemyRenderers.Length; i++)
         {
-            if (renderers[i] != null)
+            if (enemyRenderers[i] != null)
             {
-                renderers[i].material.color = originalColors[i];
+                enemyRenderers[i].material.color = tempColors[i];
             }
         }
     }
@@ -422,6 +485,15 @@ public class SuicideBomber : MonoBehaviour
         }
     }
 
+    void OnCollisionEnter(Collision collision)
+    {
+        // If collided with player, start explosion sequence
+        if (collision.gameObject.CompareTag("Player") && !isExploding)
+        {
+            StartExplosion();
+        }
+    }
+
     void OnDrawGizmosSelected()
     {
         if (cylinderTransform == null)
@@ -431,17 +503,12 @@ public class SuicideBomber : MonoBehaviour
             if (levelObject != null)
             {
                 cylinderTransform = levelObject.transform;
+                cylinderRadius = cylinderTransform.localScale.x * 0.5f;
             }
             else
             {
                 return;
             }
-        }
-
-        // Calculate cylinder radius if not set
-        if (cylinderRadius <= 0)
-        {
-            cylinderRadius = cylinderTransform.localScale.x * 0.5f;
         }
 
         // Calculate position on cylinder
@@ -452,9 +519,9 @@ public class SuicideBomber : MonoBehaviour
         );
 
         // Calculate tangent
-        Vector3 toCenter = cylinderTransform.position - cylinderPos;
-        toCenter.y = 0;
-        Vector3 tangent = Vector3.Cross(Vector3.up, toCenter.normalized).normalized;
+        Vector3 tangent = new Vector3(Mathf.Cos(currentAngle), 0f, -Mathf.Sin(currentAngle));
+        if (movingLeft)
+            tangent = -tangent;
 
         // Draw our position on cylinder
         Gizmos.color = Color.white;
@@ -463,25 +530,18 @@ public class SuicideBomber : MonoBehaviour
 
         // Draw our facing direction
         Gizmos.color = Color.blue;
-        Gizmos.DrawRay(cylinderPos, tangent * facingDirection * 2f);
+        Gizmos.DrawRay(cylinderPos, tangent * 2f);
 
         // Show detection range
         Gizmos.color = Color.yellow;
-        Gizmos.DrawRay(cylinderPos, tangent * detectionRange * 0.5f);
-        Gizmos.DrawRay(cylinderPos, -tangent * detectionRange * 0.5f);
+        Gizmos.DrawWireSphere(cylinderPos, detectionRange);
 
-        // Show explosion range
+        // Show explosion distance
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(cylinderPos, explosionDistance);
 
         // Show explosion radius
         Gizmos.color = new Color(1f, 0.5f, 0f, 0.3f);
         Gizmos.DrawWireSphere(cylinderPos, explosionRadius);
-
-        // Draw height constraints
-        Gizmos.color = Color.cyan;
-        Vector3 minPos = new Vector3(cylinderPos.x, minHeight, cylinderPos.z);
-        Vector3 maxPos = new Vector3(cylinderPos.x, maxHeight, cylinderPos.z);
-        Gizmos.DrawLine(minPos, maxPos);
     }
 }

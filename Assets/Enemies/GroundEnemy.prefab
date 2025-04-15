@@ -182,19 +182,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   enemyModel: {fileID: 2239603001391577291}
-  laserPrefab: {fileID: 2597666852404115660, guid: 655afc460289a754bb641e8f1e72c6a5, type: 3}
-  enemyFirePoint: {fileID: 4589403858293105969}
-  maxHealth: 3
+  cylinderTransform: {fileID: 2305134345780331110, guid: fd63df1fdc8762e4f968123dcffc8366, type: 3}
+  bottomGuideline: {fileID: 2395367410472272137, guid: 64128f2d322b8be42a5a0546088823a6, type: 3}
+  maxHealth: 2
+  currentHealth: 0
   moveSpeed: 3
   rotationSpeed: 90
-  stopDistance: 3
-  detectionRange: 12
-  preferredHeight: -10
-  heightAdjustSpeed: 2
-  attackRange: 10
-  fireRate: 2
-  shotAccuracy: 0.8
-  shotsPerVolley: 3
-  angleBetweenShots: 15
-  maxHeight: 3
-  minHeight: 0
+  directionChangeTime: 3

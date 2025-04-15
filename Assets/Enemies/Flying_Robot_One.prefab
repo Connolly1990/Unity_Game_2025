@@ -41,15 +41,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: f56cd91db9a927a4ebf492d16af0b880, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.2814189
+      value: 0.3809286
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f56cd91db9a927a4ebf492d16af0b880, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.2814189
+      value: 0.3809286
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f56cd91db9a927a4ebf492d16af0b880, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.2814189
+      value: 0.3809286
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f56cd91db9a927a4ebf492d16af0b880, type: 3}
       propertyPath: m_LocalPosition.x
@@ -186,13 +186,13 @@ MonoBehaviour:
   enemyModel: {fileID: 8707136470080423477}
   laserPrefab: {fileID: 2597666852404115660, guid: 655afc460289a754bb641e8f1e72c6a5, type: 3}
   enemyFirePoint: {fileID: 4196703558414068922}
-  moveSpeed: 3
+  moveSpeed: 5
   rotationSpeed: 90
-  minDistanceToPlayer: 5
-  detectionRange: 12
+  minDistanceToPlayer: 3
+  detectionRange: 15
   heightMatchSpeed: 1
   maxHealth: 5
-  fireRate: 2
+  fireRate: 10
   fireRange: 10
   maxHeight: 6
   minHeight: 2
