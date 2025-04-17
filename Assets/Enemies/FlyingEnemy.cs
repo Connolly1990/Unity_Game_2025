@@ -8,6 +8,12 @@ public class FlyingEnemy : MonoBehaviour
     public GameObject laserPrefab;
     public Transform enemyFirePoint;
 
+    // Direct references for drag-and-drop in Inspector
+    [Tooltip("Drag the player transform here")]
+    public Transform playerTransform;
+    [Tooltip("Drag the cylinder level transform here")]
+    public Transform cylinderTransform;
+
     [Header("Movement Settings")]
     public float moveSpeed = 3f;
     public float rotationSpeed = 90f;
@@ -15,10 +21,33 @@ public class FlyingEnemy : MonoBehaviour
     public float detectionRange = 12f;
     public float heightMatchSpeed = 2f;
 
+    [Header("Random Movement")]
+    [Tooltip("Enable random movement patterns")]
+    public bool useRandomMovement = true;
+    [Range(0f, 1f), Tooltip("How erratic the enemy's movement is (0-1)")]
+    public float randomnessFactor = 0.4f;
+    [Tooltip("How frequently direction changes occur (seconds)")]
+    public float directionChangeFrequency = 2f;
+    [Tooltip("Maximum vertical bobbing amount")]
+    public float verticalBobbingAmount = 1.5f;
+    [Tooltip("Speed of vertical bobbing")]
+    public float verticalBobbingSpeed = 1.2f;
+    [Tooltip("Random height variation from target height")]
+    public float randomHeightVariation = 2f;
+    [Tooltip("How quickly to change to a new random height")]
+    public float heightChangeSpeed = 0.8f;
+    [Tooltip("Chance to perform evasive maneuvers when shot (0-1)")]
+    public float evasiveManeuverChance = 0.3f;
+
     [Header("Combat Settings")]
     public int maxHealth = 5;
-    public float fireRate = 1.5f;
+    [Tooltip("How frequently to fire (shots per second)")]
+    public float fireRate = 10f; // Increased significantly for constant firing
     public float fireRange = 10f;
+    [Tooltip("Chance to fire downward instead of tangentially (0-1)")]
+    public float downwardShotChance = 0.4f;
+    [Tooltip("Always fire directly at player (overrides random direction)")]
+    public bool alwaysAimAtPlayer = true;
 
     [Header("Cylinder Boundaries")]
     public float maxHeight = 10f;
@@ -31,10 +60,19 @@ public class FlyingEnemy : MonoBehaviour
     private float nextFireTime;
     private int currentHealth;
     private bool playerDetected = false;
-    private Transform cylinderTransform;
-    private Transform playerTransform;
     private float targetHeight;
     private float facingDirection = 1f; // 1 for forward tangent, -1 for reverse
+    private Transform firePointTransform; // A separate transform just for aiming/firing
+
+    // Random movement variables
+    private float randomAngleOffset = 0f;
+    private float nextDirectionChangeTime;
+    private float randomHeightOffset = 0f;
+    private float nextHeightChangeTime;
+    private float currentBobbingPhase = 0f;
+    private float evasiveMovementEndTime = 0f;
+    private Vector3 evasiveDirection;
+    private float originalRandomness;
 
     void Awake()
     {
@@ -43,10 +81,13 @@ public class FlyingEnemy : MonoBehaviour
         rb.isKinematic = false;
         rb.constraints = RigidbodyConstraints.FreezeRotation;
         currentHealth = maxHealth;
+        originalRandomness = randomnessFactor;
 
-        // Find references immediately in Awake
-        cylinderTransform = GameObject.FindGameObjectWithTag("Level")?.transform;
-        playerTransform = GameObject.FindGameObjectWithTag("Player")?.transform;
+        // Find references if not set through inspector
+        if (cylinderTransform == null)
+            cylinderTransform = GameObject.FindGameObjectWithTag("Level")?.transform;
+        if (playerTransform == null)
+            playerTransform = GameObject.FindGameObjectWithTag("Player")?.transform;
 
         if (cylinderTransform != null)
         {
@@ -66,6 +107,18 @@ public class FlyingEnemy : MonoBehaviour
             enemyFirePoint.SetParent(transform);
             enemyFirePoint.localPosition = new Vector3(0, 0.5f, 1f);
         }
+
+        // Create a separate transform for aiming
+        firePointTransform = new GameObject("AimPoint").transform;
+        firePointTransform.SetParent(transform);
+        firePointTransform.localPosition = Vector3.zero;
+
+        // Initialize random movement values
+        nextDirectionChangeTime = Time.time + Random.Range(0.5f, directionChangeFrequency);
+        nextHeightChangeTime = Time.time + Random.Range(0.5f, directionChangeFrequency);
+        randomAngleOffset = Random.Range(-0.5f, 0.5f) * randomnessFactor;
+        randomHeightOffset = Random.Range(-randomHeightVariation, randomHeightVariation);
+        currentBobbingPhase = Random.Range(0f, 2f * Mathf.PI); // Random starting phase
     }
 
     void Start()
@@ -77,10 +130,11 @@ public class FlyingEnemy : MonoBehaviour
             if (levelObject != null)
             {
                 cylinderTransform = levelObject.transform;
+                Debug.Log("Cylinder reference found by tag");
             }
             else
             {
-                Debug.LogError("No object with 'Level' tag found for enemy!");
+                Debug.LogError("No object with 'Level' tag found for enemy! Please assign directly in inspector.");
             }
         }
 
@@ -90,10 +144,11 @@ public class FlyingEnemy : MonoBehaviour
             if (player != null)
             {
                 playerTransform = player.transform;
+                Debug.Log("Player reference found by tag");
             }
             else
             {
-                Debug.LogError("No object with 'Player' tag found for enemy!");
+                Debug.LogError("No object with 'Player' tag found for enemy! Please assign directly in inspector.");
             }
         }
 
@@ -151,6 +206,8 @@ public class FlyingEnemy : MonoBehaviour
     {
         if (playerTransform == null || cylinderTransform == null) return;
 
+        UpdateRandomMovementValues();
+
         // Calculate player angle on cylinder
         float playerAngle = Mathf.Atan2(
             playerTransform.position.x - cylinderTransform.position.x,
@@ -199,46 +256,140 @@ public class FlyingEnemy : MonoBehaviour
 
             // Set facing direction based on where player is
             facingDirection = (dot >= 0) ? 1f : -1f;
+
+            // Set the aim point toward player
+            if (alwaysAimAtPlayer)
+            {
+                // Make sure fire point is always looking at player
+                Vector3 dirToPlayer = playerPos - currentPos;
+                if (dirToPlayer.magnitude > 0.1f)
+                {
+                    firePointTransform.position = currentPos;
+                    firePointTransform.LookAt(playerPos);
+                }
+            }
         }
 
         // Movement logic
         if (playerDetected)
         {
-            // Stop at minimum distance
-            if (distanceToPlayer > minDistanceToPlayer)
-            {
-                // Move towards player
-                float moveDirection = Mathf.Sign(angleDiff);
-                currentAngle += moveDirection * moveSpeed * Time.fixedDeltaTime / cylinderRadius;
-            }
+            // Check if we're in evasive maneuvers
+            bool isEvading = Time.time < evasiveMovementEndTime;
 
-            // Match player's height with smoothing (FIXED: no more automatic upwards drift)
-            float playerHeight = Mathf.Clamp(playerTransform.position.y, minHeight, maxHeight);
-            targetHeight = Mathf.Lerp(targetHeight, playerHeight, Time.fixedDeltaTime * heightMatchSpeed);
+            if (!isEvading)
+            {
+                // Stop at minimum distance
+                if (distanceToPlayer > minDistanceToPlayer)
+                {
+                    // Move towards player with random offset
+                    float moveDirection = Mathf.Sign(angleDiff);
+                    float angularVelocity = moveSpeed * Time.fixedDeltaTime / cylinderRadius;
+
+                    if (useRandomMovement)
+                    {
+                        angularVelocity += randomAngleOffset * angularVelocity;
+                    }
+
+                    currentAngle += moveDirection * angularVelocity;
+                }
+                else
+                {
+                    // At minimum distance, add slight random movement 
+                    if (useRandomMovement)
+                    {
+                        currentAngle += randomAngleOffset * moveSpeed * 0.5f * Time.fixedDeltaTime / cylinderRadius;
+                    }
+                }
+
+                // Match player's height with smoothing plus random offset
+                float playerHeight = Mathf.Clamp(playerTransform.position.y, minHeight, maxHeight);
+                float targetPlayerHeight = playerHeight;
+
+                if (useRandomMovement)
+                {
+                    // Add bobbing motion
+                    float bobValue = Mathf.Sin(currentBobbingPhase) * verticalBobbingAmount;
+
+                    // Add random height offset
+                    targetPlayerHeight += randomHeightOffset + bobValue;
+                }
+
+                targetHeight = Mathf.Lerp(targetHeight, targetPlayerHeight, Time.fixedDeltaTime * heightMatchSpeed);
+            }
+            else
+            {
+                // Apply evasive movement
+                currentAngle += evasiveDirection.x * moveSpeed * 2f * Time.fixedDeltaTime / cylinderRadius;
+                targetHeight = Mathf.Lerp(targetHeight, transform.position.y + evasiveDirection.y * 5f,
+                                          Time.fixedDeltaTime * heightMatchSpeed * 2f);
+            }
 
             // Update position
             UpdatePositionAndRotation();
 
-            // Try to shoot if in range
+            // Constantly try to shoot when in range
             if (combinedDistance < fireRange && Time.time >= nextFireTime)
             {
                 FireAtPlayer();
-                nextFireTime = Time.time + fireRate;
+                nextFireTime = Time.time + (1f / fireRate); // Convert shots/sec to time interval
             }
         }
         else
         {
-            // Patrol behavior when player not detected
-            currentAngle += moveSpeed * 0.5f * Time.fixedDeltaTime / cylinderRadius;
+            // Patrol behavior when player not detected with random movements
+            float patrolSpeed = moveSpeed * 0.5f;
 
-            // FIXED: Keep current height when patrolling, don't change it
-            // This prevents unwanted vertical drifting
+            if (useRandomMovement)
+            {
+                // Apply random direction changes for patrolling
+                currentAngle += (patrolSpeed + randomAngleOffset * patrolSpeed) * Time.fixedDeltaTime / cylinderRadius;
+
+                // Random height changes while patrolling
+                float patrolHeight = transform.position.y;
+
+                // Add bobbing motion during patrol
+                float bobValue = Mathf.Sin(currentBobbingPhase) * verticalBobbingAmount * 0.5f;
+
+                // Gradually move toward random height offset during patrol
+                targetHeight = Mathf.Lerp(targetHeight,
+                                         Mathf.Clamp((minHeight + maxHeight) * 0.5f + randomHeightOffset + bobValue,
+                                                   minHeight, maxHeight),
+                                         Time.fixedDeltaTime * heightChangeSpeed);
+            }
 
             UpdatePositionAndRotation();
         }
 
         // Normalize angle to prevent overflow
         currentAngle = Mathf.Repeat(currentAngle, 2f * Mathf.PI);
+
+        // Update bobbing phase
+        currentBobbingPhase += verticalBobbingSpeed * Time.fixedDeltaTime;
+        if (currentBobbingPhase > 2f * Mathf.PI)
+        {
+            currentBobbingPhase -= 2f * Mathf.PI;
+        }
+    }
+
+    void UpdateRandomMovementValues()
+    {
+        if (!useRandomMovement) return;
+
+        // Time to change direction?
+        if (Time.time >= nextDirectionChangeTime)
+        {
+            randomAngleOffset = Random.Range(-1f, 1f) * randomnessFactor;
+            nextDirectionChangeTime = Time.time + Random.Range(directionChangeFrequency * 0.5f,
+                                                             directionChangeFrequency * 1.5f);
+        }
+
+        // Time to change height?
+        if (Time.time >= nextHeightChangeTime)
+        {
+            randomHeightOffset = Random.Range(-randomHeightVariation, randomHeightVariation);
+            nextHeightChangeTime = Time.time + Random.Range(directionChangeFrequency * 0.8f,
+                                                         directionChangeFrequency * 2f);
+        }
     }
 
     void UpdatePositionAndRotation()
@@ -263,30 +414,95 @@ public class FlyingEnemy : MonoBehaviour
         // Apply facing direction to tangent
         Vector3 facingDir = tangent * facingDirection;
 
-        // Calculate target rotation
-        Quaternion targetRotation = Quaternion.LookRotation(facingDir, Vector3.up);
+        // Calculate target rotation - add slight tilt based on vertical movement
+        Quaternion baseRotation = Quaternion.LookRotation(facingDir, Vector3.up);
 
-        // Apply movement using physics
-        rb.MovePosition(targetPosition);
+        if (useRandomMovement)
+        {
+            // Add a slight bank angle when moving up or down
+            float verticalSpeed = (targetHeight - transform.position.y) * 10f;
+            Quaternion bankRotation = Quaternion.Euler(Mathf.Clamp(verticalSpeed * -5f, -15f, 15f), 0, 0);
+            Quaternion finalRotation = baseRotation * bankRotation;
 
-        // Smoothly rotate to target rotation
-        rb.MoveRotation(Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed * Time.deltaTime));
+            // Apply movement using physics
+            rb.MovePosition(targetPosition);
+
+            // Smoothly rotate to target rotation with banking
+            rb.MoveRotation(Quaternion.Slerp(rb.rotation, finalRotation, rotationSpeed * Time.deltaTime));
+
+            // Apply additional model rotation if available
+            if (enemyModel != null)
+            {
+                // Add a slight wobble to the model for more organic movement
+                float wobbleX = Mathf.Sin(Time.time * 3.5f) * randomnessFactor * 5f;
+                float wobbleZ = Mathf.Cos(Time.time * 2.7f) * randomnessFactor * 5f;
+                enemyModel.localRotation = Quaternion.Euler(wobbleX, 0, wobbleZ);
+            }
+        }
+        else
+        {
+            // Standard movement without random elements
+            rb.MovePosition(targetPosition);
+            rb.MoveRotation(Quaternion.Slerp(rb.rotation, baseRotation, rotationSpeed * Time.deltaTime));
+        }
     }
 
     void FireAtPlayer()
     {
         if (enemyFirePoint == null || laserPrefab == null || playerTransform == null || cylinderTransform == null) return;
 
-        // Get the tangent direction at our position
-        Vector3 toCenter = transform.position - cylinderTransform.position;
-        toCenter.y = 0;
-        Vector3 tangent = Vector3.Cross(Vector3.up, toCenter.normalized).normalized;
+        Vector3 laserDir;
+        Vector3 firePointPosition;
 
-        // Fire in the direction we're facing
-        Vector3 laserDir = tangent * facingDirection;
+        if (alwaysAimAtPlayer)
+        {
+            // Use the dedicated aim point transform which is always looking at player
+            firePointPosition = ProjectPointToCylinder(enemyFirePoint.position);
+            laserDir = playerTransform.position - firePointPosition;
+            laserDir.Normalize();
+        }
+        else
+        {
+            // Original logic for targeting
+            // Get the tangent direction at our position
+            Vector3 toCenter = transform.position - cylinderTransform.position;
+            toCenter.y = 0;
+            Vector3 tangent = Vector3.Cross(Vector3.up, toCenter.normalized).normalized;
 
-        // Make sure the fire point is positioned on the cylinder
-        Vector3 firePointPosition = ProjectPointToCylinder(enemyFirePoint.position);
+            // Determine shot direction (tangential or downward)
+            bool isTangentialShot = (Random.value > downwardShotChance);
+
+            if (isTangentialShot)
+            {
+                // Standard tangential shot along cylinder surface
+                laserDir = tangent * facingDirection;
+            }
+            else
+            {
+                // Calculate direction toward player combining both tangential and vertical components
+                Vector3 enemyPos = transform.position;
+                Vector3 playerPos = playerTransform.position;
+
+                // Calculate vertical component
+                float verticalComponent = playerPos.y - enemyPos.y;
+
+                // Create a downward-angled shot combining tangential and downward directions
+                float downRatio = Mathf.Clamp01(Mathf.Abs(verticalComponent) / 10f);
+
+                // Combine tangential direction with downward direction
+                Vector3 downDir = new Vector3(0, -1, 0);
+                laserDir = Vector3.Lerp(tangent * facingDirection, downDir, downRatio).normalized;
+
+                // If player is above, we might want to shoot up instead
+                if (verticalComponent > 0)
+                {
+                    laserDir.y = Mathf.Abs(laserDir.y); // Make Y component positive
+                }
+            }
+
+            // Make sure the fire point is positioned on the cylinder
+            firePointPosition = ProjectPointToCylinder(enemyFirePoint.position);
+        }
 
         // Create the laser with proper orientation
         GameObject laser = Instantiate(laserPrefab, firePointPosition, Quaternion.LookRotation(laserDir, Vector3.up));
@@ -298,7 +514,21 @@ public class FlyingEnemy : MonoBehaviour
             // Use the same speed as player's laser, ensure proper initialization
             enemyLaser.Initialize(cylinderTransform, laserDir, 15f, 1, false);
         }
+        else
+        {
+            // Basic projectile without EnemyLaser component
+            Rigidbody laserRb = laser.GetComponent<Rigidbody>();
+            if (laserRb != null)
+            {
+                laserRb.useGravity = false;
+                laserRb.linearVelocity = laserDir * 15f;
+
+                // Auto-destroy after 5 seconds if it doesn't hit anything
+                Destroy(laser, 5f);
+            }
+        }
     }
+
     // Helper to project any point onto the cylinder surface (keeping Y)
     Vector3 ProjectPointToCylinder(Vector3 point)
     {
@@ -323,10 +553,40 @@ public class FlyingEnemy : MonoBehaviour
         // Optional: Add damage flash effect
         StartCoroutine(DamageFlash());
 
+        // Try to perform evasive maneuvers when hit
+        if (useRandomMovement && Random.value < evasiveManeuverChance)
+        {
+            PerformEvasiveManeuvers();
+        }
+
         if (currentHealth <= 0)
         {
             Die();
         }
+    }
+
+    void PerformEvasiveManeuvers()
+    {
+        // Set a random evasive direction
+        evasiveDirection = new Vector3(
+            Random.Range(-1f, 1f),  // Left or right
+            Random.Range(-1f, 1f),  // Up or down
+            0
+        ).normalized;
+
+        // Set duration for evasive movement
+        evasiveMovementEndTime = Time.time + Random.Range(0.5f, 1.5f);
+
+        // Temporarily increase randomness factor
+        randomnessFactor = originalRandomness * 2f;
+
+        // Schedule return to normal randomness
+        Invoke("ResetRandomness", 1.5f);
+    }
+
+    void ResetRandomness()
+    {
+        randomnessFactor = originalRandomness;
     }
 
     private System.Collections.IEnumerator DamageFlash()
@@ -392,6 +652,9 @@ public class FlyingEnemy : MonoBehaviour
         if (cylinderTransform == null)
         {
             // Try to find in editor time
+            if (playerTransform == null)
+                playerTransform = GameObject.FindGameObjectWithTag("Player")?.transform;
+
             GameObject levelObject = GameObject.FindGameObjectWithTag("Level");
             if (levelObject != null)
             {
@@ -430,6 +693,14 @@ public class FlyingEnemy : MonoBehaviour
         Gizmos.color = Color.blue;
         Gizmos.DrawRay(cylinderPos, tangent * facingDirection * 2f);
 
+        // Draw aim direction to player if enabled
+        if (alwaysAimAtPlayer && playerTransform != null)
+        {
+            Gizmos.color = Color.magenta;
+            Vector3 toPlayer = playerTransform.position - cylinderPos;
+            Gizmos.DrawRay(cylinderPos, toPlayer.normalized * 3f);
+        }
+
         // Show detection range
         Gizmos.color = Color.yellow;
         Gizmos.DrawRay(cylinderPos, tangent * detectionRange * 0.5f);
@@ -439,6 +710,15 @@ public class FlyingEnemy : MonoBehaviour
         Gizmos.color = Color.red;
         Gizmos.DrawRay(cylinderPos, tangent * fireRange * 0.5f);
         Gizmos.DrawRay(cylinderPos, -tangent * fireRange * 0.5f);
+
+        // Draw downward shot visualization
+        if (playerTransform != null && !alwaysAimAtPlayer)
+        {
+            Gizmos.color = new Color(1f, 0.5f, 0f, 0.5f); // Orange
+            Vector3 downDirection = new Vector3(0, -1, 0);
+            Vector3 combinedDirection = Vector3.Lerp(tangent * facingDirection, downDirection, 0.5f).normalized;
+            Gizmos.DrawRay(cylinderPos, combinedDirection * 3f);
+        }
 
         // Draw cylinder alignment point
         if (enemyFirePoint != null)
@@ -454,5 +734,31 @@ public class FlyingEnemy : MonoBehaviour
         Vector3 minPos = new Vector3(cylinderPos.x, minHeight, cylinderPos.z);
         Vector3 maxPos = new Vector3(cylinderPos.x, maxHeight, cylinderPos.z);
         Gizmos.DrawLine(minPos, maxPos);
+
+        // Show random movement patterns
+        if (useRandomMovement)
+        {
+            // Show random height variation
+            Gizmos.color = new Color(0.5f, 0.8f, 0.5f, 0.3f); // Light green, transparent
+            float randomHeightMax = cylinderPos.y + randomHeightVariation;
+            float randomHeightMin = cylinderPos.y - randomHeightVariation;
+            randomHeightMax = Mathf.Clamp(randomHeightMax, minHeight, maxHeight);
+            randomHeightMin = Mathf.Clamp(randomHeightMin, minHeight, maxHeight);
+
+            Vector3 randomHeightMaxPos = new Vector3(cylinderPos.x, randomHeightMax, cylinderPos.z);
+            Vector3 randomHeightMinPos = new Vector3(cylinderPos.x, randomHeightMin, cylinderPos.z);
+            Gizmos.DrawLine(randomHeightMinPos, randomHeightMaxPos);
+
+            // Show bobbing range
+            Gizmos.color = new Color(0.8f, 0.8f, 0.2f, 0.3f); // Yellow, transparent
+            float bobbingMax = cylinderPos.y + verticalBobbingAmount;
+            float bobbingMin = cylinderPos.y - verticalBobbingAmount;
+            bobbingMax = Mathf.Clamp(bobbingMax, minHeight, maxHeight);
+            bobbingMin = Mathf.Clamp(bobbingMin, minHeight, maxHeight);
+
+            Vector3 bobbingMaxPos = new Vector3(cylinderPos.x + 0.2f, bobbingMax, cylinderPos.z + 0.2f);
+            Vector3 bobbingMinPos = new Vector3(cylinderPos.x + 0.2f, bobbingMin, cylinderPos.z + 0.2f);
+            Gizmos.DrawLine(bobbingMinPos, bobbingMaxPos);
+        }
     }
 }

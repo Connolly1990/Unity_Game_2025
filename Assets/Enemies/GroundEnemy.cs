@@ -2,12 +2,18 @@
 using System.Collections;
 
 [RequireComponent(typeof(Rigidbody))]
-public class GroundEnemyMovement : MonoBehaviour
+public class GroundEnemy : MonoBehaviour
 {
     [Header("References")]
-    public Transform enemyModel;
-    public Transform cylinderTransform;
+    [Tooltip("Drag and drop the player object here")]
+    public Transform player; // Player reference
+
+    [Tooltip("Drag and drop the cylinder play space here")]
+    public Transform cylinderTransform; // Cylinder reference
+
     public Transform bottomGuideline;
+    public Transform enemyModel;
+    public Transform firePoint; // Should be placed at the top of the enemy
 
     [Header("Basic Stats")]
     public int maxHealth = 2;
@@ -18,6 +24,12 @@ public class GroundEnemyMovement : MonoBehaviour
     public float rotationSpeed = 90f;
     public float directionChangeTime = 3f;
 
+    [Header("Combat Settings")]
+    public float detectionRange = 10f;
+    public float fireRate = 2f;
+    public GameObject laserPrefab;
+    public float laserSpeed = 10f;
+
     // Private variables
     private float currentAngle = 0f;
     private float cylinderRadius;
@@ -26,6 +38,7 @@ public class GroundEnemyMovement : MonoBehaviour
     private float directionTimer;
     private Renderer[] enemyRenderers;
     private Color[] originalColors;
+    private float fireTimer;
 
     void Awake()
     {
@@ -34,8 +47,8 @@ public class GroundEnemyMovement : MonoBehaviour
         rb.isKinematic = false;
         rb.constraints = RigidbodyConstraints.FreezeRotation;
 
-        // Initialize health
         currentHealth = maxHealth;
+        fireTimer = fireRate; // Initialize fire timer
 
         // Setup renderers for damage flash effect
         enemyRenderers = GetComponentsInChildren<Renderer>();
@@ -58,47 +71,46 @@ public class GroundEnemyMovement : MonoBehaviour
             }
             else
             {
-                Debug.LogError("No object with 'Level' tag found for ground enemy!");
+                Debug.LogError("No cylinder play space assigned or found with 'Level' tag!");
                 return;
             }
         }
 
-        // Find bottom guideline - critical for this enemy type
+        if (player == null)
+        {
+            GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+            if (playerObj != null)
+            {
+                player = playerObj.transform;
+            }
+            else
+            {
+                Debug.LogError("No player assigned or found with 'Player' tag!");
+            }
+        }
+
+        // Find bottom guideline
         if (bottomGuideline == null)
         {
-            // Try to find by tag first
             GameObject guideObject = GameObject.FindGameObjectWithTag("FloorGuide");
             if (guideObject != null)
             {
                 bottomGuideline = guideObject.transform;
             }
-            // Try to find as a child of cylinder with specific name
             else if (cylinderTransform != null)
             {
                 bottomGuideline = cylinderTransform.Find("BottomGuideline");
                 if (bottomGuideline == null)
                 {
-                    Debug.LogError("BottomGuideline not found! Ground enemy needs this to function.");
+                    Debug.LogError("BottomGuideline not found!");
                     return;
                 }
             }
-            else
-            {
-                Debug.LogError("No floor guide found! Ground enemy cannot function.");
-                return;
-            }
         }
 
-        // Get cylinder radius
         cylinderRadius = cylinderTransform.localScale.x * 0.5f;
-
-        // Randomize starting angle
         currentAngle = Random.Range(0f, 2f * Mathf.PI);
-
-        // Initialize random direction change timer
         directionTimer = Random.Range(0f, directionChangeTime);
-
-        // Force position to bottom guideline immediately
         ForcePositionToFloorGuideline();
     }
 
@@ -106,30 +118,61 @@ public class GroundEnemyMovement : MonoBehaviour
     {
         if (cylinderTransform == null || bottomGuideline == null) return;
 
-        // Handle direction changes
+        // Handle movement
         directionTimer -= Time.fixedDeltaTime;
         if (directionTimer <= 0)
         {
-            // Change direction
             movingLeft = !movingLeft;
             directionTimer = directionChangeTime;
         }
 
-        // Move along cylinder
         MoveAlongFloorGuideline();
+
+        // Handle shooting
+        if (player != null)
+        {
+            fireTimer -= Time.fixedDeltaTime;
+            if (fireTimer <= 0)
+            {
+                TryShootAtPlayer();
+                fireTimer = fireRate;
+            }
+        }
+    }
+
+    void TryShootAtPlayer()
+    {
+        if (firePoint == null || laserPrefab == null) return;
+
+        // Check if player is within range
+        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+        if (distanceToPlayer <= detectionRange)
+        {
+            // Shoot upwards toward player
+            Vector3 shootDirection = (player.position - firePoint.position).normalized;
+
+            // Create laser
+            GameObject laser = Instantiate(laserPrefab, firePoint.position, Quaternion.identity);
+            Rigidbody laserRb = laser.GetComponent<Rigidbody>();
+
+            if (laserRb != null)
+            {
+                laserRb.linearVelocity = shootDirection * laserSpeed;
+            }
+
+            // Rotate laser to face shooting direction
+            laser.transform.forward = shootDirection;
+        }
     }
 
     void ForcePositionToFloorGuideline()
     {
-        // Calculate position on cylinder at the FLOOR level
         float x = cylinderRadius * Mathf.Sin(currentAngle);
         float z = cylinderRadius * Mathf.Cos(currentAngle);
-        float y = bottomGuideline.position.y; // Critical - use the floor guideline's height
+        float y = bottomGuideline.position.y;
 
-        // Set position immediately
         transform.position = new Vector3(x, y, z);
 
-        // Set rotation to face tangent to cylinder
         Vector3 tangent = new Vector3(Mathf.Cos(currentAngle), 0f, -Mathf.Sin(currentAngle));
         if (movingLeft)
             tangent = -tangent;
@@ -139,7 +182,6 @@ public class GroundEnemyMovement : MonoBehaviour
 
     void MoveAlongFloorGuideline()
     {
-        // Update angle based on direction
         if (movingLeft)
         {
             currentAngle += moveSpeed * Time.fixedDeltaTime / cylinderRadius;
@@ -149,23 +191,19 @@ public class GroundEnemyMovement : MonoBehaviour
             currentAngle -= moveSpeed * Time.fixedDeltaTime / cylinderRadius;
         }
 
-        // Keep angle within 0-2π range
         currentAngle = Mathf.Repeat(currentAngle, 2f * Mathf.PI);
 
-        // Calculate new position - ALWAYS on floor
         float x = cylinderRadius * Mathf.Sin(currentAngle);
         float z = cylinderRadius * Mathf.Cos(currentAngle);
-        float y = bottomGuideline.position.y; // Critical - floor height
+        float y = bottomGuideline.position.y;
 
         Vector3 newPosition = new Vector3(x, y, z);
         rb.MovePosition(newPosition);
 
-        // Calculate facing direction (tangent to cylinder)
         Vector3 tangent = new Vector3(Mathf.Cos(currentAngle), 0f, -Mathf.Sin(currentAngle));
         if (movingLeft)
             tangent = -tangent;
 
-        // Smooth rotation
         Quaternion targetRotation = Quaternion.LookRotation(tangent);
         rb.MoveRotation(Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed * Time.deltaTime));
     }
@@ -173,20 +211,16 @@ public class GroundEnemyMovement : MonoBehaviour
     public void TakeDamage(int damage)
     {
         currentHealth -= damage;
-
-        // Flash effect
         StartCoroutine(DamageFlash());
 
         if (currentHealth <= 0)
         {
-            // Destroy enemy when health reaches zero
             Destroy(gameObject);
         }
     }
 
     private IEnumerator DamageFlash()
     {
-        // Store original colors and set to red
         Color[] tempColors = new Color[enemyRenderers.Length];
         for (int i = 0; i < enemyRenderers.Length; i++)
         {
@@ -196,7 +230,6 @@ public class GroundEnemyMovement : MonoBehaviour
 
         yield return new WaitForSeconds(0.1f);
 
-        // Restore colors
         for (int i = 0; i < enemyRenderers.Length; i++)
         {
             if (enemyRenderers[i] != null)
@@ -208,7 +241,6 @@ public class GroundEnemyMovement : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        // Check if hit by player laser
         if (other.CompareTag("PlayerLaser"))
         {
             TakeDamage(1);
@@ -218,77 +250,13 @@ public class GroundEnemyMovement : MonoBehaviour
 
     void OnCollisionEnter(Collision collision)
     {
-        // Optional: Handle collisions with player
         if (collision.gameObject.CompareTag("Player"))
         {
-            // Deal damage to player or other logic
             PlayerHealth playerHealth = collision.gameObject.GetComponent<PlayerHealth>();
             if (playerHealth != null)
             {
                 playerHealth.TakeDamage(1);
             }
-        }
-    }
-
-    void OnDrawGizmosSelected()
-    {
-        if (cylinderTransform == null)
-        {
-            GameObject levelObject = GameObject.FindGameObjectWithTag("Level");
-            if (levelObject != null)
-            {
-                cylinderTransform = levelObject.transform;
-                cylinderRadius = cylinderTransform.localScale.x * 0.5f;
-            }
-            else
-            {
-                return;
-            }
-        }
-
-        if (bottomGuideline != null)
-        {
-            // Draw floor guideline - this is where enemy should be
-            Gizmos.color = Color.yellow;
-            float guideY = bottomGuideline.position.y;
-
-            // Draw a circle showing the floor path
-            int segments = 32;
-            Vector3 prevPoint = cylinderTransform.position + new Vector3(
-                cylinderRadius * Mathf.Sin(0),
-                guideY,
-                cylinderRadius * Mathf.Cos(0)
-            );
-
-            for (int i = 1; i <= segments; i++)
-            {
-                float angle = (i / (float)segments) * 2f * Mathf.PI;
-                Vector3 nextPoint = cylinderTransform.position + new Vector3(
-                    cylinderRadius * Mathf.Sin(angle),
-                    guideY,
-                    cylinderRadius * Mathf.Cos(angle)
-                );
-                Gizmos.DrawLine(prevPoint, nextPoint);
-                prevPoint = nextPoint;
-            }
-
-            // Draw current position on guideline
-            Vector3 currentPos = cylinderTransform.position + new Vector3(
-                cylinderRadius * Mathf.Sin(currentAngle),
-                guideY,
-                cylinderRadius * Mathf.Cos(currentAngle)
-            );
-
-            Gizmos.color = Color.red;
-            Gizmos.DrawSphere(currentPos, 0.3f);
-
-            // Draw movement direction
-            Vector3 tangent = new Vector3(Mathf.Cos(currentAngle), 0f, -Mathf.Sin(currentAngle));
-            if (movingLeft)
-                tangent = -tangent;
-
-            Gizmos.color = Color.blue;
-            Gizmos.DrawRay(currentPos, tangent * 2f);
         }
     }
 }
