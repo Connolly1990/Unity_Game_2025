@@ -26,9 +26,10 @@ public class GroundEnemy : MonoBehaviour
 
     [Header("Combat Settings")]
     public float detectionRange = 10f;
-    public float fireRate = 2f;
+    public float fireRate = 0.5f; // Faster fire rate for continuous shooting
     public GameObject laserPrefab;
     public float laserSpeed = 10f;
+    public bool shootContinuously = true; // New property to enable continuous shooting
 
     // Private variables
     private float currentAngle = 0f;
@@ -39,6 +40,7 @@ public class GroundEnemy : MonoBehaviour
     private Renderer[] enemyRenderers;
     private Color[] originalColors;
     private float fireTimer;
+    private bool playerInRange = false;
 
     void Awake()
     {
@@ -131,38 +133,41 @@ public class GroundEnemy : MonoBehaviour
         // Handle shooting
         if (player != null)
         {
+            CheckPlayerInRange();
+
             fireTimer -= Time.fixedDeltaTime;
-            if (fireTimer <= 0)
+            if (fireTimer <= 0 && (shootContinuously || playerInRange))
             {
-                TryShootAtPlayer();
+                ShootAtPlayer();
                 fireTimer = fireRate;
             }
         }
     }
 
-    void TryShootAtPlayer()
+    void CheckPlayerInRange()
+    {
+        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+        playerInRange = distanceToPlayer <= detectionRange;
+    }
+
+    void ShootAtPlayer()
     {
         if (firePoint == null || laserPrefab == null) return;
 
-        // Check if player is within range
-        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
-        if (distanceToPlayer <= detectionRange)
+        // Always shoot toward player's direction
+        Vector3 shootDirection = (player.position - firePoint.position).normalized;
+
+        // Create laser
+        GameObject laser = Instantiate(laserPrefab, firePoint.position, Quaternion.identity);
+        Rigidbody laserRb = laser.GetComponent<Rigidbody>();
+
+        if (laserRb != null)
         {
-            // Shoot upwards toward player
-            Vector3 shootDirection = (player.position - firePoint.position).normalized;
-
-            // Create laser
-            GameObject laser = Instantiate(laserPrefab, firePoint.position, Quaternion.identity);
-            Rigidbody laserRb = laser.GetComponent<Rigidbody>();
-
-            if (laserRb != null)
-            {
-                laserRb.linearVelocity = shootDirection * laserSpeed;
-            }
-
-            // Rotate laser to face shooting direction
-            laser.transform.forward = shootDirection;
+            laserRb.linearVelocity = shootDirection * laserSpeed;
         }
+
+        // Rotate laser to face shooting direction
+        laser.transform.forward = shootDirection;
     }
 
     void ForcePositionToFloorGuideline()
@@ -200,12 +205,21 @@ public class GroundEnemy : MonoBehaviour
         Vector3 newPosition = new Vector3(x, y, z);
         rb.MovePosition(newPosition);
 
+        // Calculate tangent direction for rotation
         Vector3 tangent = new Vector3(Mathf.Cos(currentAngle), 0f, -Mathf.Sin(currentAngle));
         if (movingLeft)
             tangent = -tangent;
 
+        // Keep the enemy looking forward along the cylinder while still being able to shoot up
         Quaternion targetRotation = Quaternion.LookRotation(tangent);
         rb.MoveRotation(Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed * Time.deltaTime));
+
+        // Make sure firePoint still points toward the player when possible
+        if (firePoint != null && player != null)
+        {
+            // Optional: Make firePoint subtly aim at player
+            firePoint.LookAt(player);
+        }
     }
 
     public void TakeDamage(int damage)
@@ -257,6 +271,19 @@ public class GroundEnemy : MonoBehaviour
             {
                 playerHealth.TakeDamage(1);
             }
+        }
+    }
+
+    // Visualize detection range in editor
+    void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, detectionRange);
+
+        if (firePoint != null)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawLine(firePoint.position, firePoint.position + firePoint.forward * 2f);
         }
     }
 }
