@@ -15,7 +15,10 @@ public class Spawner : MonoBehaviour
         public float minSpawnHeight = -10f;
         [Tooltip("Maximum height to spawn this enemy")]
         public float maxSpawnHeight = 10f;
+        [Tooltip("Maximum number of this enemy type allowed at once")]
+        public int maxCount = 5;
         [HideInInspector] public int weightRangeStart;
+        [HideInInspector] public List<GameObject> activeInstances = new List<GameObject>();
     }
 
     [Header("SPAWN POINTS")]
@@ -37,6 +40,8 @@ public class Spawner : MonoBehaviour
     public bool debugDrawGizmos = true;
     [Tooltip("Enable debug logs for spawn heights")]
     public bool debugLogSpawnHeights = false;
+    [Tooltip("Enable debug logs for enemy counts")]
+    public bool debugLogEnemyCounts = true;
 
     private List<Transform> allSpawnPoints = new List<Transform>();
     private Transform playerTransform;
@@ -54,6 +59,7 @@ public class Spawner : MonoBehaviour
         FindCylinder();
         ValidateEnemyTypes();
         CacheSpawnPoints();
+        ClearEnemyInstanceTracking();
 
         if (CheckSetupValidity())
         {
@@ -72,6 +78,15 @@ public class Spawner : MonoBehaviour
         {
             Debug.LogError("Spawner initialization failed - check errors above");
             enabled = false;
+        }
+    }
+
+    void ClearEnemyInstanceTracking()
+    {
+        // Clear any stale references
+        foreach (var enemyType in enemyTypes)
+        {
+            enemyType.activeInstances.Clear();
         }
     }
 
@@ -174,13 +189,32 @@ public class Spawner : MonoBehaviour
         {
             yield return new WaitForSeconds(spawnCooldown);
 
+            // Clean up any destroyed enemies from tracking lists
+            CleanupDestroyedEnemies();
+
+            // Try to find an enemy type that hasn't reached its limit
+            List<EnemyType> availableTypes = enemyTypes
+                .Where(e => e.activeInstances.Count < e.maxCount)
+                .ToList();
+
+            if (availableTypes.Count == 0)
+            {
+                if (debugLogEnemyCounts)
+                {
+                    Debug.Log("All enemy types at maximum count. Skipping spawn.");
+                }
+                continue;
+            }
+
             Transform spawnPoint = GetOptimalSpawnPoint();
             if (spawnPoint == null) continue;
 
             // Get position on cylinder surface
             Vector3 spawnPos = ProjectOnCylinder(spawnPoint.position);
 
-            EnemyType enemyToSpawn = SelectRandomEnemy(spawnPos.y);
+            // Only consider enemy types that haven't reached their limit
+            EnemyType enemyToSpawn = SelectRandomEnemyWithLimit(spawnPos.y, availableTypes);
+
             if (enemyToSpawn != null)
             {
                 // Calculate rotation to face tangent to cylinder
@@ -191,10 +225,35 @@ public class Spawner : MonoBehaviour
 
                 GameObject spawnedEnemy = Instantiate(enemyToSpawn.prefab, spawnPos, spawnRotation);
 
+                // Add enemy to tracking list
+                enemyToSpawn.activeInstances.Add(spawnedEnemy);
+
+                // Add component to handle enemy destruction tracking
+                EnemyTracker tracker = spawnedEnemy.AddComponent<EnemyTracker>();
+                tracker.Initialize(this, enemyToSpawn);
+
                 if (debugLogSpawnHeights)
                 {
                     Debug.Log($"Spawned {enemyToSpawn.prefab.name} at height {spawnPos.y}");
                 }
+
+                if (debugLogEnemyCounts)
+                {
+                    Debug.Log($"{enemyToSpawn.prefab.name} count: {enemyToSpawn.activeInstances.Count}/{enemyToSpawn.maxCount}");
+                }
+            }
+        }
+    }
+
+    void CleanupDestroyedEnemies()
+    {
+        foreach (var enemyType in enemyTypes)
+        {
+            // Remove null entries (destroyed enemies)
+            int removed = enemyType.activeInstances.RemoveAll(e => e == null);
+            if (removed > 0 && debugLogEnemyCounts)
+            {
+                Debug.Log($"Cleaned up {removed} destroyed {enemyType.prefab.name} instances");
             }
         }
     }
@@ -250,13 +309,13 @@ public class Spawner : MonoBehaviour
         return Mathf.Sqrt(arcDistance * arcDistance + yDistance * yDistance);
     }
 
-    EnemyType SelectRandomEnemy(float spawnHeight)
+    EnemyType SelectRandomEnemyWithLimit(float spawnHeight, List<EnemyType> availableTypes)
     {
-        // Get enemies valid for this height
+        // Get enemies valid for this height and under their limit
         List<EnemyType> validEnemies = new List<EnemyType>();
         int validWeightTotal = 0;
 
-        foreach (EnemyType enemy in enemyTypes)
+        foreach (EnemyType enemy in availableTypes)
         {
             if (spawnHeight >= enemy.minSpawnHeight &&
                 spawnHeight <= enemy.maxSpawnHeight)
@@ -275,7 +334,7 @@ public class Spawner : MonoBehaviour
 
             // Automatically adjust the height range of enemies to include this spawn point
             float margin = 0.1f; // Small buffer
-            foreach (EnemyType enemy in enemyTypes)
+            foreach (EnemyType enemy in availableTypes)
             {
                 if (spawnHeight < enemy.minSpawnHeight)
                 {
@@ -288,6 +347,11 @@ public class Spawner : MonoBehaviour
                 validEnemies.Add(enemy);
                 validWeightTotal += enemy.spawnWeight;
             }
+        }
+
+        if (validEnemies.Count == 0)
+        {
+            return null;
         }
 
         // Weighted random selection
@@ -303,7 +367,7 @@ public class Spawner : MonoBehaviour
             }
         }
 
-        return validEnemies.Count > 0 ? validEnemies[Random.Range(0, validEnemies.Count)] : enemyTypes[0];
+        return validEnemies[Random.Range(0, validEnemies.Count)];
     }
 
     void OnDrawGizmos()
@@ -323,6 +387,41 @@ public class Spawner : MonoBehaviour
                 Gizmos.DrawLine(spawnPos, childPos);
                 Gizmos.DrawWireSphere(childPos, 0.2f);
             }
+        }
+    }
+
+    // Method to be called by the EnemyTracker component when an enemy is destroyed
+    public void OnEnemyDestroyed(GameObject enemy, EnemyType enemyType)
+    {
+        if (enemyType != null && enemyType.activeInstances.Contains(enemy))
+        {
+            enemyType.activeInstances.Remove(enemy);
+
+            if (debugLogEnemyCounts)
+            {
+                Debug.Log($"{enemyType.prefab.name} destroyed. Count: {enemyType.activeInstances.Count}/{enemyType.maxCount}");
+            }
+        }
+    }
+}
+
+// Helper component to track when enemies are destroyed
+public class EnemyTracker : MonoBehaviour
+{
+    private Spawner spawner;
+    private Spawner.EnemyType enemyType;
+
+    public void Initialize(Spawner spawnerRef, Spawner.EnemyType type)
+    {
+        spawner = spawnerRef;
+        enemyType = type;
+    }
+
+    void OnDestroy()
+    {
+        if (spawner != null)
+        {
+            spawner.OnEnemyDestroyed(gameObject, enemyType);
         }
     }
 }
