@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 [RequireComponent(typeof(Rigidbody))]
 public class FlyingEnemy : MonoBehaviour
@@ -20,6 +21,16 @@ public class FlyingEnemy : MonoBehaviour
     public float minDistanceToPlayer = 5f;
     public float detectionRange = 12f;
     public float heightMatchSpeed = 2f;
+
+    [Header("Enemy Avoidance")]
+    [Tooltip("Minimum distance to keep from other enemies")]
+    public float minEnemyDistance = 3f;
+    [Tooltip("How strongly enemies repel each other")]
+    public float enemyRepulsionForce = 2f;
+    [Tooltip("How far to check for other enemies")]
+    public float enemyDetectionRange = 5f;
+    [Tooltip("Layer mask for enemy detection")]
+    public LayerMask enemyLayerMask;
 
     [Header("Random Movement")]
     [Tooltip("Enable random movement patterns")]
@@ -74,6 +85,11 @@ public class FlyingEnemy : MonoBehaviour
     private Vector3 evasiveDirection;
     private float originalRandomness;
 
+    // Enemy avoidance variables
+    private Vector3 avoidanceForce = Vector3.zero;
+    private List<FlyingEnemy> nearbyEnemies = new List<FlyingEnemy>();
+    private Collider[] enemyColliders = new Collider[10]; // Pre-allocate array for efficiency
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -88,6 +104,10 @@ public class FlyingEnemy : MonoBehaviour
             cylinderTransform = GameObject.FindGameObjectWithTag("Level")?.transform;
         if (playerTransform == null)
             playerTransform = GameObject.FindGameObjectWithTag("Player")?.transform;
+
+        // Set default enemy layer mask if not set
+        if (enemyLayerMask == 0)
+            enemyLayerMask = LayerMask.GetMask("Default", "Enemy");
 
         if (cylinderTransform != null)
         {
@@ -208,6 +228,10 @@ public class FlyingEnemy : MonoBehaviour
 
         UpdateRandomMovementValues();
 
+        // Detect nearby enemies and calculate avoidance force
+        DetectNearbyEnemies();
+        CalculateAvoidanceForce();
+
         // Calculate player angle on cylinder
         float playerAngle = Mathf.Atan2(
             playerTransform.position.x - cylinderTransform.position.x,
@@ -290,15 +314,23 @@ public class FlyingEnemy : MonoBehaviour
                         angularVelocity += randomAngleOffset * angularVelocity;
                     }
 
+                    // Apply avoidance influence to angular velocity (horizontal movement)
+                    angularVelocity += avoidanceForce.x * Time.fixedDeltaTime;
+
                     currentAngle += moveDirection * angularVelocity;
                 }
                 else
                 {
-                    // At minimum distance, add slight random movement 
+                    // At minimum distance, add slight random movement plus avoidance
+                    float avoidanceAngularVelocity = avoidanceForce.x * Time.fixedDeltaTime;
+
                     if (useRandomMovement)
                     {
                         currentAngle += randomAngleOffset * moveSpeed * 0.5f * Time.fixedDeltaTime / cylinderRadius;
                     }
+
+                    // Add avoidance movement even when not actively pursuing player
+                    currentAngle += avoidanceAngularVelocity;
                 }
 
                 // Match player's height with smoothing plus random offset
@@ -314,6 +346,9 @@ public class FlyingEnemy : MonoBehaviour
                     targetPlayerHeight += randomHeightOffset + bobValue;
                 }
 
+                // Apply vertical avoidance influence
+                targetPlayerHeight += avoidanceForce.y;
+
                 targetHeight = Mathf.Lerp(targetHeight, targetPlayerHeight, Time.fixedDeltaTime * heightMatchSpeed);
             }
             else
@@ -322,6 +357,10 @@ public class FlyingEnemy : MonoBehaviour
                 currentAngle += evasiveDirection.x * moveSpeed * 2f * Time.fixedDeltaTime / cylinderRadius;
                 targetHeight = Mathf.Lerp(targetHeight, transform.position.y + evasiveDirection.y * 5f,
                                           Time.fixedDeltaTime * heightMatchSpeed * 2f);
+
+                // Even when evading, apply some avoidance to prevent collision
+                currentAngle += avoidanceForce.x * 0.5f * Time.fixedDeltaTime;
+                targetHeight += avoidanceForce.y * 0.5f;
             }
 
             // Update position
@@ -357,6 +396,10 @@ public class FlyingEnemy : MonoBehaviour
                                          Time.fixedDeltaTime * heightChangeSpeed);
             }
 
+            // Apply avoidance even during patrol
+            currentAngle += avoidanceForce.x * Time.fixedDeltaTime;
+            targetHeight += avoidanceForce.y * 0.5f;
+
             UpdatePositionAndRotation();
         }
 
@@ -369,6 +412,104 @@ public class FlyingEnemy : MonoBehaviour
         {
             currentBobbingPhase -= 2f * Mathf.PI;
         }
+    }
+
+    void DetectNearbyEnemies()
+    {
+        // Clear previous frame's data
+        nearbyEnemies.Clear();
+
+        // Non-allocating physics overlap to find nearby enemies
+        int numColliders = Physics.OverlapSphereNonAlloc(
+            transform.position,
+            enemyDetectionRange,
+            enemyColliders,
+            enemyLayerMask
+        );
+
+        for (int i = 0; i < numColliders; i++)
+        {
+            // Skip if it's our own collider
+            if (enemyColliders[i].gameObject == gameObject)
+                continue;
+
+            FlyingEnemy enemy = enemyColliders[i].GetComponent<FlyingEnemy>();
+            if (enemy != null)
+            {
+                nearbyEnemies.Add(enemy);
+            }
+        }
+    }
+
+    void CalculateAvoidanceForce()
+    {
+        // Reset avoidance force
+        avoidanceForce = Vector3.zero;
+
+        if (nearbyEnemies.Count == 0)
+            return;
+
+        Vector3 currentCylinderPos = GetPositionOnCylinder(transform.position);
+
+        foreach (FlyingEnemy enemy in nearbyEnemies)
+        {
+            // Skip if enemy is null (maybe destroyed)
+            if (enemy == null) continue;
+
+            // Get both positions on the cylinder surface
+            Vector3 enemyCylinderPos = GetPositionOnCylinder(enemy.transform.position);
+
+            // Calculate angular distance (for horizontal avoidance)
+            float enemyAngle = Mathf.Atan2(
+                enemyCylinderPos.x - cylinderTransform.position.x,
+                enemyCylinderPos.z - cylinderTransform.position.z
+            );
+            float angularDist = Mathf.DeltaAngle(currentAngle * Mathf.Rad2Deg, enemyAngle * Mathf.Rad2Deg) * Mathf.Deg2Rad;
+            float horizontalDist = Mathf.Abs(angularDist * cylinderRadius);
+
+            // Calculate vertical distance
+            float verticalDist = Mathf.Abs(transform.position.y - enemy.transform.position.y);
+
+            // Calculate combined distance (similar to detection calculations)
+            float combinedDist = Mathf.Sqrt(horizontalDist * horizontalDist + verticalDist * verticalDist);
+
+            // Only apply avoidance if enemy is too close
+            if (combinedDist < minEnemyDistance)
+            {
+                // Calculate repulsion strength (stronger when closer)
+                float repulsionStrength = enemyRepulsionForce * (1.0f - combinedDist / minEnemyDistance);
+
+                // Apply horizontal repulsion (angular)
+                float horizontalRepulsion = -Mathf.Sign(angularDist) * repulsionStrength;
+
+                // Apply vertical repulsion
+                float verticalRepulsion = Mathf.Sign(transform.position.y - enemy.transform.position.y) * repulsionStrength;
+
+                // Accumulate forces
+                avoidanceForce.x += horizontalRepulsion;
+                avoidanceForce.y += verticalRepulsion;
+            }
+        }
+
+        // Clamp maximum avoidance force to prevent extreme behaviors
+        avoidanceForce.x = Mathf.Clamp(avoidanceForce.x, -2.0f, 2.0f);
+        avoidanceForce.y = Mathf.Clamp(avoidanceForce.y, -2.0f, 2.0f);
+    }
+
+    Vector3 GetPositionOnCylinder(Vector3 worldPosition)
+    {
+        if (cylinderTransform == null) return worldPosition;
+
+        // Project to cylinder surface
+        Vector3 dirToCylinder = worldPosition - cylinderTransform.position;
+        dirToCylinder.y = 0; // Flatten to get horizontal direction
+        dirToCylinder = dirToCylinder.normalized * cylinderRadius;
+
+        return new Vector3(
+            cylinderTransform.position.x + dirToCylinder.x,
+            worldPosition.y, // Keep the same Y
+            cylinderTransform.position.z + dirToCylinder.z
+        );
     }
 
     void UpdateRandomMovementValues()
