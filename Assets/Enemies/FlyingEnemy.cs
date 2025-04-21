@@ -1,5 +1,6 @@
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
+
 
 [RequireComponent(typeof(Rigidbody))]
 public class FlyingEnemy : MonoBehaviour
@@ -8,6 +9,7 @@ public class FlyingEnemy : MonoBehaviour
     public Transform enemyModel;
     public GameObject laserPrefab;
     public Transform enemyFirePoint;
+    public GameObject explosionPrefab;
 
     // Direct references for drag-and-drop in Inspector
     [Tooltip("Drag the player transform here")]
@@ -757,24 +759,33 @@ public class FlyingEnemy : MonoBehaviour
 
     void Die()
     {
-        // Create death effect
-        GameObject deathEffect = new GameObject("DeathEffect");
-        deathEffect.transform.position = transform.position;
+        // Instantiate the explosion prefab at our position
+        if (explosionPrefab != null)
+        {
+            Instantiate(explosionPrefab, transform.position, Quaternion.identity);
+        }
+        else
+        {
+            // Fallback to creating particle effect if no prefab assigned
+            GameObject deathEffect = new GameObject("DeathEffect");
+            deathEffect.transform.position = transform.position;
 
-        // Add particle system
-        ParticleSystem ps = deathEffect.AddComponent<ParticleSystem>();
-        var main = ps.main;
-        main.startColor = Color.red;
-        main.startSize = 0.5f;
-        main.startLifetime = 1f;
-        main.startSpeed = 2f;
+            // Add particle system
+            ParticleSystem ps = deathEffect.AddComponent<ParticleSystem>();
+            var main = ps.main;
+            main.startColor = Color.red;
+            main.startSize = 0.5f;
+            main.startLifetime = 1f;
+            main.startSpeed = 2f;
 
-        var emission = ps.emission;
-        emission.rateOverTime = 0;
-        emission.SetBursts(new ParticleSystem.Burst[] { new ParticleSystem.Burst(0f, 20) });
+            var emission = ps.emission;
+            emission.rateOverTime = 0;
+            emission.SetBursts(new ParticleSystem.Burst[] { new ParticleSystem.Burst(0f, 20) });
 
-        ps.Play();
-        Destroy(deathEffect, 2f);
+            ps.Play();
+            Destroy(deathEffect, 2f);
+        }
+
         Destroy(gameObject);
     }
 

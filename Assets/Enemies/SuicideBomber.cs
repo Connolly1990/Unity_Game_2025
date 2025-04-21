@@ -128,6 +128,8 @@ public class SuicideBomber : MonoBehaviour
         if (isExploding)
         {
             HandleExplosion();
+            // Make sure position is maintained even during explosion
+            UpdatePositionAndRotation();
             return;
         }
 
@@ -213,10 +215,13 @@ public class SuicideBomber : MonoBehaviour
 
     void UpdatePositionAndRotation(bool snap = false)
     {
+        if (cylinderTransform == null) return;
+
         // Calculate position on cylinder (relative to cylinder position)
-        float x = cylinderTransform.position.x + cylinderRadius * Mathf.Sin(currentAngle);
-        float z = cylinderTransform.position.z + cylinderRadius * Mathf.Cos(currentAngle);
-        Vector3 targetPosition = new Vector3(x, middleGuideline ? middleGuideline.position.y : transform.position.y, z);
+        float x = cylinderTransform.position.x + cylinderRadius * Mathf.Cos(currentAngle);
+        float z = cylinderTransform.position.z + cylinderRadius * Mathf.Sin(currentAngle);
+        float y = middleGuideline ? middleGuideline.position.y : transform.position.y;
+        Vector3 targetPosition = new Vector3(x, y, z);
 
         // Update the enemy's position on the cylinder
         if (snap)
@@ -225,11 +230,16 @@ public class SuicideBomber : MonoBehaviour
         }
         else
         {
+            // Use rigidbody for movement but ensure position is correct
             rb.MovePosition(targetPosition);
+
+            // Additionally set the transform position to ensure it stays on the cylinder
+            // This is the key fix to prevent detachment
+            transform.position = targetPosition;
         }
 
         // Make enemy face tangent to the cylinder (direction of movement)
-        Vector3 tangent = new Vector3(Mathf.Cos(currentAngle), 0f, -Mathf.Sin(currentAngle));
+        Vector3 tangent = new Vector3(-Mathf.Sin(currentAngle), 0f, Mathf.Cos(currentAngle));
         if (movingLeft)
             tangent = -tangent;
 
@@ -311,9 +321,12 @@ public class SuicideBomber : MonoBehaviour
         isExploding = true;
         explosionTimer = explosionDelay;
 
-        // Stop all movement
+        // Stop all movement but ensure we stay on cylinder
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
+
+        // Make sure we're positioned correctly
+        UpdatePositionAndRotation(true);
 
         // Visual indication that bomber is about to explode
         foreach (Renderer renderer in enemyRenderers)
@@ -447,6 +460,9 @@ public class SuicideBomber : MonoBehaviour
         // Flash effect
         StartCoroutine(DamageFlash());
 
+        // Force position update to stay on cylinder when hit
+        UpdatePositionAndRotation(true);
+
         if (currentHealth <= 0)
         {
             StartExplosion(); // Suicide bomber explodes when killed
@@ -473,6 +489,9 @@ public class SuicideBomber : MonoBehaviour
                 enemyRenderers[i].material.color = tempColors[i];
             }
         }
+
+        // Make sure we're still on the cylinder after the flash effect
+        UpdatePositionAndRotation(true);
     }
 
     void OnTriggerEnter(Collider other)
@@ -482,6 +501,9 @@ public class SuicideBomber : MonoBehaviour
         {
             TakeDamage(1);
             Destroy(other.gameObject);
+
+            // Force position update immediately after laser hit
+            UpdatePositionAndRotation(true);
         }
     }
 
@@ -492,6 +514,9 @@ public class SuicideBomber : MonoBehaviour
         {
             StartExplosion();
         }
+
+        // Force position update on any collision
+        UpdatePositionAndRotation(true);
     }
 
     void OnDrawGizmosSelected()
@@ -513,13 +538,13 @@ public class SuicideBomber : MonoBehaviour
 
         // Calculate position on cylinder
         Vector3 cylinderPos = cylinderTransform.position + new Vector3(
-            cylinderRadius * Mathf.Sin(currentAngle),
+            cylinderRadius * Mathf.Cos(currentAngle),
             transform.position.y,
-            cylinderRadius * Mathf.Cos(currentAngle)
+            cylinderRadius * Mathf.Sin(currentAngle)
         );
 
         // Calculate tangent
-        Vector3 tangent = new Vector3(Mathf.Cos(currentAngle), 0f, -Mathf.Sin(currentAngle));
+        Vector3 tangent = new Vector3(-Mathf.Sin(currentAngle), 0f, Mathf.Cos(currentAngle));
         if (movingLeft)
             tangent = -tangent;
 

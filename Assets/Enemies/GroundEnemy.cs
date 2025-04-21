@@ -31,6 +31,9 @@ public class GroundEnemy : MonoBehaviour
     public float laserSpeed = 10f;
     public bool shootContinuously = true; // New property to enable continuous shooting
 
+    [Header("Death Effect")]
+    public GameObject explosionPrefab; // Add this line for the explosion prefab
+
     // Private variables
     private float currentAngle = 0f;
     private float cylinderRadius;
@@ -229,6 +232,11 @@ public class GroundEnemy : MonoBehaviour
 
         if (currentHealth <= 0)
         {
+            // Spawn explosion before destroying
+            if (explosionPrefab != null)
+            {
+                Instantiate(explosionPrefab, transform.position, Quaternion.identity);
+            }
             Destroy(gameObject);
         }
     }
