@@ -12,6 +12,7 @@ TagManager:
   - Ceiling
   - PlayerLaser
   - EnemyLaser
+  - Heart
   layers:
   - Default
   - TransparentFX

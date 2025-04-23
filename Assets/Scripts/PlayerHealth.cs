@@ -1,187 +1,166 @@
 using UnityEngine;
 using UnityEngine.UI;
-using System.Threading.Tasks;
-using UnityEngine.SceneManagement;
+using System.Collections;
 
 public class PlayerHealth : MonoBehaviour
 {
-    public int maxHealth = 10;
-    public float invulnerabilityDuration = 1f;
-    public Image healthBar;
-    public Color damageFlashColor = Color.red;
-    public float flashDuration = 0.1f;
-
-    // Optional death effects
-    public bool useDeathParticles = true;
-    public Color deathParticleColor = Color.red;
-    public int particleCount = 20;
-    public float particleForce = 5f;
-
-    [SerializeField] private MonoBehaviour gameManagerObject;
-
+    [Header("Health Configuration")]
+    [SerializeField] private int maxHealth = 5;
     private int currentHealth;
-    private bool isInvulnerable;
-    private Renderer[] renderers;
-    private Color[] originalColors;
-    private MaterialPropertyBlock propertyBlock;
-    private static readonly int ColorProperty = Shader.PropertyToID("_BaseColor");
 
-    private void Awake()
+    [Header("UI References")]
+    [SerializeField] private GameObject[] heartImages; // Assign in Inspector
+    [SerializeField] private bool findHeartsByTag = false; // Enable to find hearts by tag
+
+    [Header("Damage Configuration")]
+    [SerializeField] private float invincibilityDuration = 1.5f;
+    private bool isInvincible = false;
+
+    [Header("Effects")]
+    [SerializeField] private GameObject damageVFX;
+    [SerializeField] private GameObject deathVFX;
+    [SerializeField] private AudioClip damageSound;
+    [SerializeField] private AudioClip deathSound;
+    private AudioSource audioSource;
+
+    [Header("Damage Sources")]
+    [SerializeField] private string[] damageTags;
+
+    private Renderer playerRenderer;
+    private Color originalColor;
+
+    void Awake()
     {
-        propertyBlock = new MaterialPropertyBlock();
-    }
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+            audioSource = gameObject.AddComponent<AudioSource>();
 
-    private void Start()
-    {
-        currentHealth = maxHealth;
-        UpdateHealthBar();
+        playerRenderer = GetComponent<Renderer>();
+        if (playerRenderer != null)
+            originalColor = playerRenderer.material.color;
 
-        // Cache renderers for flash effect
-        renderers = GetComponentsInChildren<Renderer>();
-        originalColors = new Color[renderers.Length];
-
-        for (int i = 0; i < renderers.Length; i++)
+        if (findHeartsByTag)
         {
-            renderers[i].GetPropertyBlock(propertyBlock);
-            originalColors[i] = propertyBlock.GetColor(ColorProperty);
+            FindHeartImagesByTag();
         }
     }
 
-    public void TakeDamage(float damage)
+    void Start()
     {
-        if (isInvulnerable) return;
+        currentHealth = maxHealth;
+        UpdateHealthDisplay();
+    }
 
-        currentHealth -= Mathf.RoundToInt(damage);
+    void FindHeartImagesByTag()
+    {
+        GameObject[] foundHearts = GameObject.FindGameObjectsWithTag("Heart");
+        if (foundHearts.Length > 0)
+        {
+            heartImages = foundHearts;
+            Debug.Log($"Found {heartImages.Length} hearts by tag");
+        }
+        else
+        {
+            Debug.LogWarning("No GameObjects with 'Heart' tag found!");
+        }
+    }
 
-        // Use non-coroutine methods
-        _ = FlashEffect();
-        _ = SetInvulnerability();
+    void OnTriggerEnter(Collider other)
+    {
+        foreach (string tag in damageTags)
+        {
+            if (other.CompareTag(tag) && !isInvincible)
+            {
+                TakeDamage(1);
+                break;
+            }
+        }
+    }
 
-        UpdateHealthBar();
+    public void TakeDamage(int damage)
+    {
+        if (isInvincible || currentHealth <= 0) return;
+
+        currentHealth -= damage;
+        currentHealth = Mathf.Max(0, currentHealth);
+        UpdateHealthDisplay();
 
         if (currentHealth <= 0)
         {
             Die();
         }
-    }
-
-    private void UpdateHealthBar()
-    {
-        if (healthBar != null)
+        else
         {
-            healthBar.fillAmount = (float)currentHealth / maxHealth;
+            if (damageSound) audioSource.PlayOneShot(damageSound);
+            if (damageVFX) Instantiate(damageVFX, transform.position, Quaternion.identity);
+            StartCoroutine(InvincibilityFrames());
         }
     }
 
-    private async Task FlashEffect()
+    private IEnumerator InvincibilityFrames()
     {
-        // Flash to damage color using MaterialPropertyBlock
-        for (int i = 0; i < renderers.Length; i++)
+        isInvincible = true;
+
+        if (playerRenderer != null)
         {
-            propertyBlock.SetColor(ColorProperty, damageFlashColor);
-            renderers[i].SetPropertyBlock(propertyBlock);
-        }
-
-        await Task.Delay(Mathf.RoundToInt(flashDuration * 1000));
-
-        // Reset to original color
-        for (int i = 0; i < renderers.Length; i++)
-        {
-            propertyBlock.SetColor(ColorProperty, originalColors[i]);
-            renderers[i].SetPropertyBlock(propertyBlock);
-        }
-    }
-
-    private async Task SetInvulnerability()
-    {
-        isInvulnerable = true;
-        await Task.Delay(Mathf.RoundToInt(invulnerabilityDuration * 1000));
-        isInvulnerable = false;
-    }
-
-    private void Die()
-    {
-        // Create simple particle effect since no explosion prefab exists
-        if (useDeathParticles)
-        {
-            CreateDeathParticles();
-        }
-
-        // Disable player components instead of destroying
-        var playerMovement = GetComponent<CylinderPlayerMovement>();
-        if (playerMovement != null)
-        {
-            playerMovement.enabled = false;
-        }
-
-        // Handle game over logic using reflection to avoid direct dependency
-        if (gameManagerObject != null)
-        {
-            // Try to call GameOver method via reflection
-            var gameOverMethod = gameManagerObject.GetType().GetMethod("GameOver");
-            if (gameOverMethod != null)
+            float flashSpeed = 0.1f;
+            for (float t = 0; t < invincibilityDuration; t += flashSpeed)
             {
-                gameOverMethod.Invoke(gameManagerObject, null);
-            }
-            else
-            {
-                Debug.LogWarning("GameOver method not found on assigned gameManagerObject");
-                _ = DelayedRestartLevel(3f);
+                playerRenderer.material.color = Color.red;
+                yield return new WaitForSeconds(flashSpeed / 2);
+                playerRenderer.material.color = originalColor;
+                yield return new WaitForSeconds(flashSpeed / 2);
             }
         }
         else
         {
-            // Fallback if no game manager
-            _ = DelayedRestartLevel(3f);
+            yield return new WaitForSeconds(invincibilityDuration);
         }
 
-        // Hide player model
-        foreach (Renderer renderer in renderers)
+        isInvincible = false;
+    }
+
+    private void UpdateHealthDisplay()
+    {
+        if (heartImages == null || heartImages.Length == 0)
         {
-            renderer.enabled = false;
+            Debug.LogWarning("No heart images assigned!");
+            return;
         }
 
-        // Disable colliders
-        foreach (Collider collider in GetComponentsInChildren<Collider>())
+        for (int i = 0; i < heartImages.Length; i++)
         {
-            collider.enabled = false;
+            if (heartImages[i] != null)
+            {
+                // Simply toggle the GameObject's active state
+                heartImages[i].SetActive(i < currentHealth);
+            }
         }
     }
 
-    private void CreateDeathParticles()
+    private void Die()
     {
-        // Create a simple particle effect using primitive game objects
-        for (int i = 0; i < particleCount; i++)
+        if (deathSound) audioSource.PlayOneShot(deathSound);
+        if (deathVFX) Instantiate(deathVFX, transform.position, Quaternion.identity);
+
+        Vector3 deathPosition = transform.position;
+        gameObject.SetActive(false);
+
+        if (GameManager.Instance != null)
         {
-            // Create a small cube as a "particle"
-            GameObject particle = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            particle.transform.localScale = Vector3.one * 0.2f;
-            particle.transform.position = transform.position;
-
-            // Add material with death color
-            var renderer = particle.GetComponent<Renderer>();
-            renderer.material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            renderer.material.color = deathParticleColor;
-
-            // Add rigidbody for physics
-            var rb = particle.AddComponent<Rigidbody>();
-            rb.AddExplosionForce(particleForce, transform.position, 2f);
-
-            // Destroy after delay
-            Destroy(particle, 2f);
+            GameManager.Instance.PlayerDied(deathPosition);
         }
     }
 
-    private async Task DelayedRestartLevel(float delay)
+    public void RestoreHealth(int amount)
     {
-        await Task.Delay(Mathf.RoundToInt(delay * 1000));
-        RestartLevel();
+        currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
+        UpdateHealthDisplay();
     }
 
-    private void RestartLevel()
+    public void ResetHealth()
     {
-        // Proper scene loading with loading screen option
-        var currentScene = SceneManager.GetActiveScene().buildIndex;
-        SceneManager.LoadScene(currentScene);
+        currentHealth = maxHealth;
+        UpdateHealthDisplay();
     }
 }

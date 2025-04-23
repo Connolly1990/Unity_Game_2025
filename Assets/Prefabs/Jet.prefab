@@ -166,7 +166,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71b31c9e2becf82409e920866f0edfb8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cylinderTransform: {fileID: 0}
+  cylinderTransform: {fileID: 2305134345780331110, guid: fd63df1fdc8762e4f968123dcffc8366, type: 3}
   playerModel: {fileID: 7917476434420484250}
   moveSpeed: 5
   rotationSpeed: 120
@@ -220,16 +220,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4e3c1b3b971f554ea4031e9041ba7a3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 10
-  invulnerabilityDuration: 1
-  healthBar: {fileID: 0}
-  damageFlashColor: {r: 1, g: 0, b: 0, a: 1}
-  flashDuration: 0.1
-  useDeathParticles: 1
-  deathParticleColor: {r: 1, g: 0, b: 0, a: 1}
-  particleCount: 20
-  particleForce: 5
-  gameManagerObject: {fileID: 0}
+  maxHealth: 5
+  heartImages:
+  - {fileID: 6772420642133498097, guid: 47a8367b0ff8eb24b850366cc8e74dc0, type: 3}
+  - {fileID: 6332820591316521321, guid: dcfcb75ab0a5b064b875d8e5d4533a01, type: 3}
+  - {fileID: 5804882143414480371, guid: cffb675a0c5fba542b37051835511fc2, type: 3}
+  - {fileID: 1422477837151442151, guid: 978d5417f26119c4f937f4df92fdf3a4, type: 3}
+  - {fileID: 2948511087932992246, guid: 83da6dd0cf1020f409c71177e6714b0c, type: 3}
+  findHeartsByTag: 1
+  invincibilityDuration: 1.5
+  damageVFX: {fileID: 3555101640308003225, guid: bf60e4f1793350c429227f7bb1a19dc8, type: 3}
+  deathVFX: {fileID: 3555101640308003225, guid: bf60e4f1793350c429227f7bb1a19dc8, type: 3}
+  damageSound: {fileID: 0}
+  deathSound: {fileID: 0}
+  damageTags:
+  - Enemy
+  - EnemyLaser
 --- !u!4 &7917476434420484250 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: e153c9ef961f89841b5f5c0249f45162, type: 3}
