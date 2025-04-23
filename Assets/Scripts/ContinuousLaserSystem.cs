@@ -8,6 +8,24 @@ public class ContinuousLaserSystem : MonoBehaviour
     public float fireRate = 0.1f;
     private float nextFireTime;
 
+    // Audio variables
+    public AudioSource audioSource; // Reference to the AudioSource component
+    public AudioClip laserShootSound; // The "pew" sound effect for the laser
+
+    void Start()
+    {
+        // Try to get the AudioSource component if not assigned
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+            // If there's still no AudioSource, add one
+            if (audioSource == null)
+            {
+                audioSource = gameObject.AddComponent<AudioSource>();
+            }
+        }
+    }
+
     void Update()
     {
         if (playerMovement.CanShoot && playerMovement.IsMoving && Time.time >= nextFireTime)
@@ -37,5 +55,11 @@ public class ContinuousLaserSystem : MonoBehaviour
             playerMovement.cylinderTransform,
             laserDir
         );
+
+        // Play the laser shoot sound if available
+        if (laserShootSound != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(laserShootSound);
+        }
     }
 }
