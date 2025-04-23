@@ -25,8 +25,8 @@ public class CylinderPlayerMovement : MonoBehaviour
     private float currentAngle = 0f;
     private float cylinderRadius;
     private Rigidbody rb;
-    private int horizontalDirection = 0;
-    private int verticalDirection = 0;
+    private float horizontalInput = 0;
+    private float verticalInput = 0;
     private bool canMoveUp = true;
     private bool canMoveDown = true;
     private bool hasMovedSinceStart = false;
@@ -68,7 +68,7 @@ public class CylinderPlayerMovement : MonoBehaviour
 
     void FixedUpdate()
     {
-        IsMoving = horizontalDirection != 0 || verticalDirection != 0;
+        IsMoving = horizontalInput != 0 || verticalInput != 0;
 
         if (IsMoving && !hasMovedSinceStart)
         {
@@ -77,10 +77,10 @@ public class CylinderPlayerMovement : MonoBehaviour
         }
 
         // Update raw direction based on input
-        int rawDirection = (int)Mathf.Sign(horizontalDirection);
+        int rawDirection = Mathf.Approximately(horizontalInput, 0) ? 0 : (int)Mathf.Sign(horizontalInput);
 
         // Update position using angle (normalized to prevent overflow)
-        currentAngle += horizontalDirection * moveSpeed * Time.fixedDeltaTime / cylinderRadius;
+        currentAngle += horizontalInput * moveSpeed * Time.fixedDeltaTime / cylinderRadius;
         currentAngle = Mathf.Repeat(currentAngle, 2f * Mathf.PI);
 
         // Calculate actual direction relative to cylinder tangent
@@ -94,9 +94,9 @@ public class CylinderPlayerMovement : MonoBehaviour
 
         // Vertical movement
         float newY = rb.position.y;
-        if (verticalDirection > 0 && canMoveUp)
+        if (verticalInput > 0 && canMoveUp)
             newY += moveSpeed * Time.fixedDeltaTime;
-        else if (verticalDirection < 0 && canMoveDown)
+        else if (verticalInput < 0 && canMoveDown)
             newY -= moveSpeed * Time.fixedDeltaTime;
 
         UpdatePositionAndRotation(newY);
@@ -105,17 +105,19 @@ public class CylinderPlayerMovement : MonoBehaviour
 
     void HandleInput()
     {
-        // Horizontal input (toggle-based)
-        if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
-            horizontalDirection = horizontalDirection == 1 ? 0 : 1;
-        if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
-            horizontalDirection = horizontalDirection == -1 ? 0 : -1;
+        // Get horizontal input (hold-based)
+        horizontalInput = 0;
+        if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow))
+            horizontalInput += 1;
+        if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow))
+            horizontalInput -= 1;
 
-        // Vertical input (toggle-based)
-        if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow))
-            verticalDirection = verticalDirection == 1 ? 0 : 1;
-        if (Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow))
-            verticalDirection = verticalDirection == -1 ? 0 : -1;
+        // Get vertical input (hold-based)
+        verticalInput = 0;
+        if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow))
+            verticalInput += 1;
+        if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow))
+            verticalInput -= 1;
     }
 
     void HandleMissileFiring()
