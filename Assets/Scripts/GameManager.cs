@@ -66,7 +66,6 @@ public class GameManager : MonoBehaviour
         {
             player.transform.position = lastDeathPosition;
             player.SetActive(true);
-
             PlayerHealth health = player.GetComponent<PlayerHealth>();
             if (health) health.ResetHealth();
         }
@@ -75,6 +74,13 @@ public class GameManager : MonoBehaviour
     public void RestartGame()
     {
         currentLives = livesCount;
+
+        // Reset score when restarting game
+        if (ScoreManager.Instance != null)
+        {
+            ScoreManager.Instance.ResetScore();
+        }
+
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }

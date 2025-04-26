@@ -147,7 +147,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      earth-from-space--small-and-on-fire--move-earth-to_0: -8315232092682232865
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
