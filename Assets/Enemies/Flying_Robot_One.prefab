@@ -189,7 +189,7 @@ MonoBehaviour:
   enemyModel: {fileID: 8707136470080423477}
   laserPrefab: {fileID: 2597666852404115660, guid: 655afc460289a754bb641e8f1e72c6a5, type: 3}
   enemyFirePoint: {fileID: 4196703558414068922}
-  explosionPrefab: {fileID: 3555101640308003225, guid: bf60e4f1793350c429227f7bb1a19dc8, type: 3}
+  explosionPrefab: {fileID: 3555101640308003225, guid: 16bca5d679e91cf49bf7d7bad271c751, type: 3}
   playerTransform: {fileID: 7917476434420484250, guid: f010a16e0742e2e49b9e44ac436cd1c0, type: 3}
   cylinderTransform: {fileID: 2305134345780331110, guid: fd63df1fdc8762e4f968123dcffc8366, type: 3}
   moveSpeed: 4

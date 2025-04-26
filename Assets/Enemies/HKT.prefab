@@ -199,7 +199,7 @@ MonoBehaviour:
   laserPrefab: {fileID: 2597666852404115660, guid: 655afc460289a754bb641e8f1e72c6a5, type: 3}
   laserSpeed: 10
   shootContinuously: 1
-  explosionPrefab: {fileID: 3555101640308003225, guid: bf60e4f1793350c429227f7bb1a19dc8, type: 3}
+  explosionPrefab: {fileID: 3555101640308003225, guid: 16bca5d679e91cf49bf7d7bad271c751, type: 3}
 --- !u!114 &4761525662221895530
 MonoBehaviour:
   m_ObjectHideFlags: 0

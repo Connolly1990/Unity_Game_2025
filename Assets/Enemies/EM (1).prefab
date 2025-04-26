@@ -165,7 +165,7 @@ MonoBehaviour:
   blinkFrequency: 0.5
   explosionRadius: 5
   fadeDuration: 0.2
-  explosionEffectPrefab: {fileID: 3555101640308003225, guid: bf60e4f1793350c429227f7bb1a19dc8, type: 3}
+  explosionEffectPrefab: {fileID: 3555101640308003225, guid: d81b67a9cf8837e47a949bb6945ae648, type: 3}
 --- !u!114 &8951927350594935217
 MonoBehaviour:
   m_ObjectHideFlags: 0
