@@ -45,7 +45,7 @@ public class HomingMissile : MonoBehaviour
         if (audioSource == null && (engineSound != null || explosionSound != null))
         {
             audioSource = gameObject.AddComponent<AudioSource>();
-            audioSource.spatialBlend = 1f; // 3D sound
+            audioSource.spatialBlend = 0f; // 2D sound (changed from 1f which was 3D)
 
             if (engineSound != null)
             {

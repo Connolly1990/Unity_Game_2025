@@ -8,6 +8,8 @@ public class SuicideBomber : MonoBehaviour
     public Transform enemyModel;
     public Transform cylinderTransform; // Reference to the cylinder
     public Transform middleGuideline;   // Reference to the guideline
+    public AudioClip explosionSound;    // Audio clip for explosion (drag in inspector)
+    public AudioClip damageSound;      // Audio clip for when taking damage (drag in inspector)
 
     [Header("Basic Stats")]
     public int maxHealth = 2;
@@ -39,6 +41,7 @@ public class SuicideBomber : MonoBehaviour
     private bool chargingAtPlayer = false;  // Whether actively pursuing the player
     private bool isExploding = false;       // Whether in explosion sequence
     private float explosionTimer = 0f;      // Countdown to explosion
+    private AudioSource audioSource;
 
     private void Awake()
     {
@@ -70,6 +73,17 @@ public class SuicideBomber : MonoBehaviour
         {
             originalColors[i] = enemyRenderers[i].material.color;
         }
+
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+
+        // Configure audio source for 2D sound
+        audioSource.spatialBlend = 0f; // 0 = 2D, 1 = 3D
+        audioSource.playOnAwake = false;
+        audioSource.loop = false;
     }
 
     private void Start()
@@ -363,6 +377,17 @@ public class SuicideBomber : MonoBehaviour
 
     void Explode()
     {
+        // Play explosion sound as 2D
+        if (explosionSound != null)
+        {
+            // Create a temporary AudioSource for 2D death sound
+            GameObject tempAudioObject = new GameObject("TempAudio");
+            AudioSource tempAudio = tempAudioObject.AddComponent<AudioSource>();
+            tempAudio.spatialBlend = 0f; // 2D sound
+            tempAudio.PlayOneShot(explosionSound);
+            Destroy(tempAudioObject, explosionSound.length);
+        }
+
         // Create explosion effect
         if (explosionEffectPrefab != null)
         {
@@ -456,6 +481,12 @@ public class SuicideBomber : MonoBehaviour
     public void TakeDamage(int damage)
     {
         currentHealth -= damage;
+
+        // Play damage sound
+        if (damageSound != null)
+        {
+            audioSource.PlayOneShot(damageSound);
+        }
 
         // Flash effect
         StartCoroutine(DamageFlash());

@@ -33,7 +33,14 @@ public class PlayerHealth : MonoBehaviour
     {
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
+        {
             audioSource = gameObject.AddComponent<AudioSource>();
+        }
+
+        // Configure audio source for 2D sound
+        audioSource.spatialBlend = 0f; // 0 = 2D, 1 = 3D
+        audioSource.playOnAwake = false;
+        audioSource.loop = false;
 
         playerRenderer = GetComponent<Renderer>();
         if (playerRenderer != null)
@@ -45,6 +52,7 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
+    // Rest of your code remains the same...
     void Start()
     {
         currentHealth = maxHealth;

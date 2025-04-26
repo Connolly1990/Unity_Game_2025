@@ -11,6 +11,15 @@ public class FlyingEnemy : MonoBehaviour
     public Transform enemyFirePoint;
     public GameObject explosionPrefab;
 
+    // Audio References
+    [Header("Audio")]
+    [Tooltip("Drag the audio clip for taking damage here")]
+    public AudioClip damageSound;
+    [Tooltip("Drag the audio clip for enemy death here")]
+    public AudioClip deathSound;
+    [Tooltip("Optional: AudioSource component (one will be added if not assigned)")]
+    public AudioSource audioSource;
+
     // Direct references for drag-and-drop in Inspector
     [Tooltip("Drag the player transform here")]
     public Transform playerTransform;
@@ -101,6 +110,14 @@ public class FlyingEnemy : MonoBehaviour
         currentHealth = maxHealth;
         originalRandomness = randomnessFactor;
 
+        // Ensure we have an AudioSource component
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.spatialBlend = 0f; // Make it 2D sound
+            audioSource.playOnAwake = false;
+        }
         // Find references if not set through inspector
         if (cylinderTransform == null)
             cylinderTransform = GameObject.FindGameObjectWithTag("Level")?.transform;
@@ -693,6 +710,13 @@ public class FlyingEnemy : MonoBehaviour
     {
         currentHealth -= damage;
 
+        // Play damage sound if available
+        if (damageSound != null && audioSource != null)
+        {
+            audioSource.pitch = Random.Range(0.9f, 1.1f); // Add slight variation
+            audioSource.PlayOneShot(damageSound);
+        }
+
         // Optional: Add damage flash effect
         StartCoroutine(DamageFlash());
 
@@ -759,6 +783,26 @@ public class FlyingEnemy : MonoBehaviour
 
     void Die()
     {
+        // Play death sound if available
+        if (deathSound != null && audioSource != null)
+        {
+            // Create a temporary audio source that will survive the enemy destruction
+            GameObject audioObj = new GameObject("DeathSound");
+            audioObj.transform.position = transform.position;
+            AudioSource tempAudio = audioObj.AddComponent<AudioSource>();
+
+            // Copy settings from the enemy's audio source
+            tempAudio.clip = deathSound;
+            tempAudio.spatialBlend = audioSource.spatialBlend;
+            tempAudio.rolloffMode = audioSource.rolloffMode;
+            tempAudio.minDistance = audioSource.minDistance;
+            tempAudio.maxDistance = audioSource.maxDistance;
+            tempAudio.volume = audioSource.volume;
+
+            // Play the sound and destroy when finished
+            tempAudio.Play();
+            Destroy(audioObj, deathSound.length + 0.1f);
+        }
         // Instantiate the explosion prefab at our position
         if (explosionPrefab != null)
         {

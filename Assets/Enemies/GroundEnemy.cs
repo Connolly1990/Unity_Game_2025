@@ -15,6 +15,11 @@ public class GroundEnemy : MonoBehaviour
     public Transform enemyModel;
     public Transform firePoint; // Should be placed at the top of the enemy
 
+    [Header("Audio References")]
+    public AudioClip explosionSound;    // Sound when enemy explodes/dies
+    public AudioClip laserShotSound;    // Sound when shooting lasers
+    public AudioClip damageSound;      // Sound when taking damage
+
     [Header("Basic Stats")]
     public int maxHealth = 2;
     public int currentHealth;
@@ -32,7 +37,7 @@ public class GroundEnemy : MonoBehaviour
     public bool shootContinuously = true; // New property to enable continuous shooting
 
     [Header("Death Effect")]
-    public GameObject explosionPrefab; // Add this line for the explosion prefab
+    public GameObject explosionPrefab;
 
     // Private variables
     private float currentAngle = 0f;
@@ -44,6 +49,7 @@ public class GroundEnemy : MonoBehaviour
     private Color[] originalColors;
     private float fireTimer;
     private bool playerInRange = false;
+    private AudioSource audioSource;
 
     void Awake()
     {
@@ -62,6 +68,18 @@ public class GroundEnemy : MonoBehaviour
         {
             originalColors[i] = enemyRenderers[i].material.color;
         }
+
+        // Setup audio source with 2D configuration
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+
+        // Configure audio source for 2D sound
+        audioSource.spatialBlend = 0f; // 0 = 2D, 1 = 3D
+        audioSource.playOnAwake = false;
+        audioSource.loop = false;
     }
 
     void Start()
@@ -157,6 +175,12 @@ public class GroundEnemy : MonoBehaviour
     {
         if (firePoint == null || laserPrefab == null) return;
 
+        // Play laser shot sound
+        if (laserShotSound != null)
+        {
+            audioSource.PlayOneShot(laserShotSound);
+        }
+
         // Always shoot toward player's direction
         Vector3 shootDirection = (player.position - firePoint.position).normalized;
 
@@ -228,17 +252,40 @@ public class GroundEnemy : MonoBehaviour
     public void TakeDamage(int damage)
     {
         currentHealth -= damage;
+
+        // Play damage sound
+        if (damageSound != null)
+        {
+            audioSource.PlayOneShot(damageSound);
+        }
+
         StartCoroutine(DamageFlash());
 
         if (currentHealth <= 0)
         {
-            // Spawn explosion before destroying
-            if (explosionPrefab != null)
-            {
-                Instantiate(explosionPrefab, transform.position, Quaternion.identity);
-            }
-            Destroy(gameObject);
+            Die();
         }
+    }
+
+    void Die()
+    {
+        // Play explosion sound as 2D
+        if (explosionSound != null)
+        {
+            // Create a temporary AudioSource for 2D death sound
+            GameObject tempAudioObject = new GameObject("TempAudio");
+            AudioSource tempAudio = tempAudioObject.AddComponent<AudioSource>();
+            tempAudio.spatialBlend = 0f; // 2D sound
+            tempAudio.PlayOneShot(explosionSound);
+            Destroy(tempAudioObject, explosionSound.length);
+        }
+
+        // Spawn explosion before destroying
+        if (explosionPrefab != null)
+        {
+            Instantiate(explosionPrefab, transform.position, Quaternion.identity);
+        }
+        Destroy(gameObject);
     }
 
     private IEnumerator DamageFlash()

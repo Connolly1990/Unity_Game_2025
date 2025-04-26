@@ -190,6 +190,9 @@ MonoBehaviour:
   laserPrefab: {fileID: 2597666852404115660, guid: 655afc460289a754bb641e8f1e72c6a5, type: 3}
   enemyFirePoint: {fileID: 4196703558414068922}
   explosionPrefab: {fileID: 3555101640308003225, guid: 16bca5d679e91cf49bf7d7bad271c751, type: 3}
+  damageSound: {fileID: 8300000, guid: 0a492dc3357816946a1561a1c5e3b2ce, type: 3}
+  deathSound: {fileID: 8300000, guid: 67fa460c8c40d7940870e6744886a6e6, type: 3}
+  audioSource: {fileID: 0}
   playerTransform: {fileID: 7917476434420484250, guid: f010a16e0742e2e49b9e44ac436cd1c0, type: 3}
   cylinderTransform: {fileID: 2305134345780331110, guid: fd63df1fdc8762e4f968123dcffc8366, type: 3}
   moveSpeed: 4

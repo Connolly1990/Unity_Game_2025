@@ -532,7 +532,7 @@ MonoBehaviour:
   boundaryOffset: 0.5
   missilePrefab: {fileID: 1710280637058912617, guid: 57f3a64cddfaf2f47a2c64d1b5cdf726, type: 3}
   missileCooldown: 2
-  missileFireSound: {fileID: 0}
+  missileFireSound: {fileID: 8300000, guid: 52eb68ef8d275be4fb3dc866b981de3f, type: 3}
 --- !u!114 &7637291099654648510
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -549,6 +549,8 @@ MonoBehaviour:
   firePoint: {fileID: 1090881234431384077}
   playerMovement: {fileID: 888489341603870471}
   fireRate: 0.2
+  audioSource: {fileID: 0}
+  laserShootSound: {fileID: 8300000, guid: 2088645fafa13fe4c8e3ed3b4aad0cb6, type: 3}
 --- !u!65 &2969156962897819240
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -593,8 +595,8 @@ MonoBehaviour:
   invincibilityDuration: 1.5
   damageVFX: {fileID: 3555101640308003225, guid: bf60e4f1793350c429227f7bb1a19dc8, type: 3}
   deathVFX: {fileID: 3555101640308003225, guid: bf60e4f1793350c429227f7bb1a19dc8, type: 3}
-  damageSound: {fileID: 0}
-  deathSound: {fileID: 0}
+  damageSound: {fileID: 8300000, guid: 0a492dc3357816946a1561a1c5e3b2ce, type: 3}
+  deathSound: {fileID: 8300000, guid: 61c963ff574af3846bace355d835ba74, type: 3}
   damageTags:
   - Enemy
   - EnemyLaser

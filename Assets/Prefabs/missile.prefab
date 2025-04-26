@@ -161,6 +161,8 @@ MonoBehaviour:
   explosionLayerMask:
     serializedVersion: 2
     m_Bits: 0
-  explosionSound: {fileID: 0}
+  explosionSound: {fileID: 8300000, guid: 67fa460c8c40d7940870e6744886a6e6, type: 3}
+  explosionVolume: 1
   missileTrail: {fileID: 0}
-  engineSound: {fileID: 0}
+  engineSound: {fileID: 8300000, guid: 8dbd20df7de8eec4bb2e9a041139f2e2, type: 3}
+  engineVolume: 1

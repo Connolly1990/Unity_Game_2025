@@ -189,6 +189,9 @@ MonoBehaviour:
   bottomGuideline: {fileID: 2395367410472272137, guid: 64128f2d322b8be42a5a0546088823a6, type: 3}
   enemyModel: {fileID: 2271039211562368149}
   firePoint: {fileID: 7196127954636761718}
+  explosionSound: {fileID: 8300000, guid: 67fa460c8c40d7940870e6744886a6e6, type: 3}
+  laserShotSound: {fileID: 8300000, guid: 2088645fafa13fe4c8e3ed3b4aad0cb6, type: 3}
+  damageSound: {fileID: 8300000, guid: 0a492dc3357816946a1561a1c5e3b2ce, type: 3}
   maxHealth: 3
   currentHealth: 0
   moveSpeed: 3
