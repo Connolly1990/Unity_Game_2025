@@ -159,8 +159,8 @@ public class PlayerHealth : MonoBehaviour
             GameManager.Instance.PlayerDied(deathPosition);
         }
 
-        FindObjectOfType<DeathMenuManager>().ShowDeathMenu();
-
+        
+        Object.FindFirstObjectByType<DeathMenuManager>().ShowDeathMenu();
     }
 
     public void RestoreHealth(int amount)

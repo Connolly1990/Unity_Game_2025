@@ -16,7 +16,7 @@ public class HomingMissile : MonoBehaviour
     [Header("Explosion")]
     public float explosionRadius = 5f;
     public float explosionForce = 500f;
-    public int explosionDamage = 2; // Changed to int to match FlyingEnemy.TakeDamage
+    public int explosionDamage = 2;
     public GameObject explosionEffect;
     public LayerMask explosionLayerMask;
     public AudioClip explosionSound;
@@ -40,12 +40,11 @@ public class HomingMissile : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
 
-        // Set up audio
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null && (engineSound != null || explosionSound != null))
         {
             audioSource = gameObject.AddComponent<AudioSource>();
-            audioSource.spatialBlend = 0f; // 2D sound (changed from 1f which was 3D)
+            audioSource.spatialBlend = 0f;
 
             if (engineSound != null)
             {
@@ -69,14 +68,12 @@ public class HomingMissile : MonoBehaviour
         isInitialized = true;
         nextTargetSearchTime = 0f;
 
-        // Store cylinder reference for Resogun style game
         if (cylinder != null)
         {
             cylinderTransform = cylinder;
             cylinderRadius = cylinder.localScale.x * 0.5f;
         }
 
-        // Initial search for target
         FindNearestEnemy();
     }
 
@@ -84,7 +81,6 @@ public class HomingMissile : MonoBehaviour
     {
         if (!isInitialized) return;
 
-        // Update lifetime and destroy if exceeded
         currentLifetime += Time.deltaTime;
         if (currentLifetime >= maxLifetime)
         {
@@ -92,7 +88,6 @@ public class HomingMissile : MonoBehaviour
             return;
         }
 
-        // Update target search periodically
         if (Time.time >= nextTargetSearchTime)
         {
             FindNearestEnemy();
@@ -106,27 +101,19 @@ public class HomingMissile : MonoBehaviour
 
         if (currentLifetime <= initialBoostDuration)
         {
-            // Initial boost phase - just maintain speed and direction
             rb.linearVelocity = transform.forward * speed * initialBoostMultiplier;
         }
         else
         {
-            // Normal homing behavior
             if (targetTransform != null)
             {
-                // Calculate direction to target
                 Vector3 targetDirection = (targetTransform.position - transform.position).normalized;
-
-                // Rotate towards target
                 Quaternion targetRotation = Quaternion.LookRotation(targetDirection);
                 rb.rotation = Quaternion.RotateTowards(rb.rotation, targetRotation, rotationSpeed * Time.deltaTime);
-
-                // Apply forward thrust
                 rb.linearVelocity = transform.forward * speed;
             }
             else
             {
-                // No target found, maintain current direction
                 rb.linearVelocity = transform.forward * speed;
             }
         }
@@ -153,21 +140,33 @@ public class HomingMissile : MonoBehaviour
 
     void OnCollisionEnter(Collision collision)
     {
-        // Check if we hit an enemy
         if (collision.gameObject.CompareTag("Enemy"))
         {
-            // Direct hit damage before explosion
-            // Check for FlyingEnemy script instead of EnemyHealth
-            FlyingEnemy enemy = collision.gameObject.GetComponent<FlyingEnemy>();
-            if (enemy != null)
+            // Check for all enemy types
+            FlyingEnemy flyingEnemy = collision.gameObject.GetComponent<FlyingEnemy>();
+            BossEnemy bossEnemy = collision.gameObject.GetComponent<BossEnemy>();
+            SuicideBomber suicideBomber = collision.gameObject.GetComponent<SuicideBomber>();
+            GroundEnemy groundEnemy = collision.gameObject.GetComponent<GroundEnemy>();
+
+            if (flyingEnemy != null)
             {
-                // Apply direct hit damage
-                enemy.TakeDamage((int)explosionDamage);
+                flyingEnemy.TakeDamage((int)explosionDamage);
+            }
+            else if (bossEnemy != null)
+            {
+                bossEnemy.TakeDamage((int)explosionDamage);
+            }
+            else if (suicideBomber != null)
+            {
+                suicideBomber.TakeDamage((int)explosionDamage);
+            }
+            else if (groundEnemy != null)
+            {
+                groundEnemy.TakeDamage((int)explosionDamage);
             }
 
             Explode();
         }
-        // Hit something else valid for explosion
         else if (explosionLayerMask.value == 0 ||
             ((1 << collision.gameObject.layer) & explosionLayerMask.value) != 0)
         {
@@ -175,19 +174,31 @@ public class HomingMissile : MonoBehaviour
         }
     }
 
-    // Add trigger-based collision as well for more reliable hit detection
     void OnTriggerEnter(Collider other)
     {
-        // Check if we hit an enemy
         if (other.CompareTag("Enemy"))
         {
-            // Direct hit damage before explosion
-            // Check for FlyingEnemy script instead of EnemyHealth
-            FlyingEnemy enemy = other.GetComponent<FlyingEnemy>();
-            if (enemy != null)
+            // Check for all enemy types
+            FlyingEnemy flyingEnemy = other.GetComponent<FlyingEnemy>();
+            BossEnemy bossEnemy = other.GetComponent<BossEnemy>();
+            SuicideBomber suicideBomber = other.GetComponent<SuicideBomber>();
+            GroundEnemy groundEnemy = other.GetComponent<GroundEnemy>();
+
+            if (flyingEnemy != null)
             {
-                // Apply direct hit damage
-                enemy.TakeDamage((int)explosionDamage);
+                flyingEnemy.TakeDamage((int)explosionDamage);
+            }
+            else if (bossEnemy != null)
+            {
+                bossEnemy.TakeDamage((int)explosionDamage);
+            }
+            else if (suicideBomber != null)
+            {
+                suicideBomber.TakeDamage((int)explosionDamage);
+            }
+            else if (groundEnemy != null)
+            {
+                groundEnemy.TakeDamage((int)explosionDamage);
             }
 
             Explode();
@@ -199,37 +210,49 @@ public class HomingMissile : MonoBehaviour
         if (isExploding) return;
         isExploding = true;
 
-        // Create explosion effect
         if (explosionEffect != null)
         {
             Instantiate(explosionEffect, transform.position, Quaternion.identity);
         }
 
-        // Play explosion sound
         if (audioSource != null && explosionSound != null)
         {
-            audioSource.Stop(); // Stop engine sound
+            audioSource.Stop();
             audioSource.loop = false;
             audioSource.PlayOneShot(explosionSound);
         }
 
-        // Apply explosion force and damage to nearby objects
         Collider[] colliders = Physics.OverlapSphere(transform.position, explosionRadius, explosionLayerMask);
         foreach (Collider hit in colliders)
         {
-            // Apply damage to enemies
             if (hit.CompareTag("Enemy"))
             {
-                // If there's a FlyingEnemy component, deal damage
-                FlyingEnemy enemy = hit.GetComponent<FlyingEnemy>();
-                if (enemy != null)
+                // Check for all enemy types in explosion radius
+                FlyingEnemy flyingEnemy = hit.GetComponent<FlyingEnemy>();
+                BossEnemy bossEnemy = hit.GetComponent<BossEnemy>();
+                SuicideBomber suicideBomber = hit.GetComponent<SuicideBomber>();
+                GroundEnemy groundEnemy = hit.GetComponent<GroundEnemy>();
+
+                int damage = CalculateDamageByDistance(hit.transform.position);
+
+                if (flyingEnemy != null)
                 {
-                    int damage = CalculateDamageByDistance(hit.transform.position);
-                    enemy.TakeDamage(damage);
+                    flyingEnemy.TakeDamage(damage);
+                }
+                else if (bossEnemy != null)
+                {
+                    bossEnemy.TakeDamage(damage);
+                }
+                else if (suicideBomber != null)
+                {
+                    suicideBomber.TakeDamage(damage);
+                }
+                else if (groundEnemy != null)
+                {
+                    groundEnemy.TakeDamage(damage);
                 }
             }
 
-            // Apply force to rigidbodies
             Rigidbody hitRb = hit.GetComponent<Rigidbody>();
             if (hitRb != null)
             {
@@ -237,7 +260,6 @@ public class HomingMissile : MonoBehaviour
             }
         }
 
-        // Destroy missile components but keep the GameObject until sound finishes
         if (rb != null) rb.isKinematic = true;
         if (GetComponent<Collider>() != null)
         {
@@ -247,29 +269,24 @@ public class HomingMissile : MonoBehaviour
 
         if (missileTrail != null) missileTrail.SetActive(false);
 
-        // Hide the missile visuals
         Renderer[] renderers = GetComponentsInChildren<Renderer>();
         foreach (Renderer r in renderers)
         {
             r.enabled = false;
         }
 
-        // Schedule final destruction
         if (audioSource != null && explosionSound != null)
         {
-            // Wait for explosion sound to finish
             Destroy(gameObject, explosionSound.length);
         }
         else
         {
-            // No sound, destroy immediately
             Destroy(gameObject);
         }
     }
 
     int CalculateDamageByDistance(Vector3 targetPosition)
     {
-        // Calculate damage falloff based on distance from explosion center
         float distance = Vector3.Distance(transform.position, targetPosition);
         float damagePercent = 1f - Mathf.Clamp01(distance / explosionRadius);
         return Mathf.Max(1, (int)(explosionDamage * damagePercent));
@@ -277,11 +294,9 @@ public class HomingMissile : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
-        // Draw detection radius
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, detectionRadius);
 
-        // Draw explosion radius
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, explosionRadius);
     }
