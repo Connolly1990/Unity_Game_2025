@@ -336,7 +336,7 @@ MonoBehaviour:
   - {fileID: 5308537299139838815}
   - {fileID: 37471547818848884}
   laserPrefab: {fileID: 6175100582483043453, guid: ecfea05ce047ac3429bfd840c95db6d0, type: 3}
-  burstFireRate: 2
+  burstFireRate: 0.8
   burstDelay: 0.05
   laserDamage: 1
   laserSpeed: 12
@@ -357,7 +357,7 @@ MonoBehaviour:
   missileFirePoint: {fileID: 1931709003807961770}
   missilePrefab: {fileID: 7060256533086681217, guid: 27f46c5844b274a4294a82c1e701cf6a, type: 3}
   missileFireRate: 5
-  missileDamage: 2
+  missileDamage: 1
   missileSpeed: 10
   detectionRange: 20
   missileLaunchSound: {fileID: 8300000, guid: 2088645fafa13fe4c8e3ed3b4aad0cb6, type: 3}
