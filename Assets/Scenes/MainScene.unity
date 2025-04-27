@@ -16899,11 +16899,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 501f675e851c2c445942668571dc6da0, type: 3}
---- !u!4 &419738743 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 1931709003807961770, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-  m_PrefabInstance: {fileID: 9006113188560024638}
-  m_PrefabAsset: {fileID: 0}
 --- !u!4 &421435190 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: ec1024bd4ca8e744aa144d32ea04ce6d, type: 3}
@@ -19141,11 +19136,6 @@ Transform:
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: ec1024bd4ca8e744aa144d32ea04ce6d, type: 3}
   m_PrefabInstance: {fileID: 453149299}
-  m_PrefabAsset: {fileID: 0}
---- !u!4 &816622498 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 5308537299139838815, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-  m_PrefabInstance: {fileID: 9006113188560024638}
   m_PrefabAsset: {fileID: 0}
 --- !u!4 &816789005 stripped
 Transform:
@@ -40651,11 +40641,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: ec1024bd4ca8e744aa144d32ea04ce6d, type: 3}
   m_PrefabInstance: {fileID: 238657343}
   m_PrefabAsset: {fileID: 0}
---- !u!4 &1269851071 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 7380888611514802835, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-  m_PrefabInstance: {fileID: 9006113188560024638}
-  m_PrefabAsset: {fileID: 0}
 --- !u!4 &1271825322 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: ec1024bd4ca8e744aa144d32ea04ce6d, type: 3}
@@ -42147,11 +42132,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1474684939}
   m_CullTransparentMesh: 1
---- !u!4 &1481431287 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 37471547818848884, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-  m_PrefabInstance: {fileID: 9006113188560024638}
-  m_PrefabAsset: {fileID: 0}
 --- !u!4 &1491803928 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: ec1024bd4ca8e744aa144d32ea04ce6d, type: 3}
@@ -53676,42 +53656,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 3360182248257960377, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-      propertyPath: missilePrefab
-      value: 
-      objectReference: {fileID: 7060256533086681217, guid: 27f46c5844b274a4294a82c1e701cf6a, type: 3}
-    - target: {fileID: 3360182248257960377, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-      propertyPath: missileFirePoint
-      value: 
-      objectReference: {fileID: 419738743}
-    - target: {fileID: 3360182248257960377, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-      propertyPath: missileLaunchSound
-      value: 
-      objectReference: {fileID: 8300000, guid: 2088645fafa13fe4c8e3ed3b4aad0cb6, type: 3}
-    - target: {fileID: 3701543885941215662, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-      propertyPath: laserPrefab
-      value: 
-      objectReference: {fileID: 6175100582483043453, guid: ecfea05ce047ac3429bfd840c95db6d0, type: 3}
-    - target: {fileID: 3701543885941215662, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-      propertyPath: laserShotSound
-      value: 
-      objectReference: {fileID: 8300000, guid: 52eb68ef8d275be4fb3dc866b981de3f, type: 3}
-    - target: {fileID: 3701543885941215662, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-      propertyPath: laserFirePoints.Array.size
-      value: 3
-      objectReference: {fileID: 0}
-    - target: {fileID: 3701543885941215662, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-      propertyPath: 'laserFirePoints.Array.data[0]'
-      value: 
-      objectReference: {fileID: 1269851071}
-    - target: {fileID: 3701543885941215662, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-      propertyPath: 'laserFirePoints.Array.data[1]'
-      value: 
-      objectReference: {fileID: 816622498}
-    - target: {fileID: 3701543885941215662, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-      propertyPath: 'laserFirePoints.Array.data[2]'
-      value: 
-      objectReference: {fileID: 1481431287}
     - target: {fileID: 8620814599354195246, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
       propertyPath: m_LocalPosition.x
       value: 12.422888
