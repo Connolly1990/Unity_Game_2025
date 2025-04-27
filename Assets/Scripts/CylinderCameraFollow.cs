@@ -47,6 +47,12 @@ public class CylinderCameraFollow : MonoBehaviour
         transform.position = snap ? targetPos :
             Vector3.Lerp(transform.position, targetPos, 5f * Time.deltaTime);
 
+        // Clamp the camera's Y position so it doesn't go under the ground
+        Vector3 pos = transform.position;
+        pos.y = Mathf.Max(pos.y, 1f); // 1f is your minimum height. Adjust if needed.
+        transform.position = pos;
+
+
         // 3. Look target (slightly into the cylinder)
         Vector3 lookTarget = cylinder.position -
                            (cylinderToPlayer * lookAheadDistance) +
