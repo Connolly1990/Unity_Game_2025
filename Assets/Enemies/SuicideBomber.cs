@@ -496,7 +496,8 @@ public class SuicideBomber : MonoBehaviour
 
         if (currentHealth <= 0)
         {
-            StartExplosion(); // Suicide bomber explodes when killed
+            // Immediately explode when health is depleted instead of starting the countdown
+            Explode();
         }
     }
 
