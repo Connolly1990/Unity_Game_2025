@@ -3,35 +3,23 @@ using UnityEngine.UI;
 
 public class VolumeManagerSimple : MonoBehaviour
 {
-    private static VolumeManagerSimple instance;
     private Slider volumeSlider;
 
-    private void Awake()
+    private void Start()
     {
-        if (instance == null)
+        // Find inactive sliders too
+        volumeSlider = FindObjectOfType<Slider>(true);
+
+        if (volumeSlider != null)
         {
-            instance = this;
-            DontDestroyOnLoad(gameObject);
+            float volume = PlayerPrefs.GetFloat("Volume", 0.75f);
+            volumeSlider.value = volume;
+            SetVolume(volume);
+            volumeSlider.onValueChanged.AddListener(SetVolume);
         }
         else
         {
-            Destroy(gameObject);
-        }
-    }
-
-    private void Update()
-    {
-        if (volumeSlider == null)
-        {
-            volumeSlider = FindObjectOfType<Slider>();
-
-            if (volumeSlider != null)
-            {
-                float volume = PlayerPrefs.GetFloat("Volume", 0.75f);
-                volumeSlider.value = volume;
-                SetVolume(volume);
-                volumeSlider.onValueChanged.AddListener(SetVolume);
-            }
+            Debug.LogWarning("Volume Slider not found in scene!");
         }
     }
 
