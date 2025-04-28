@@ -19,30 +19,19 @@ public class VolumeManagerSimple : MonoBehaviour
         }
     }
 
-    private void Start()
+    private void Update()
     {
-        // Try to find a Slider automatically
-        volumeSlider = FindObjectOfType<Slider>();
-
-        if (volumeSlider != null)
+        if (volumeSlider == null)
         {
-            float volume = PlayerPrefs.GetFloat("Volume", 0.75f);
-            volumeSlider.value = volume;
-            SetVolume(volume);
-            volumeSlider.onValueChanged.AddListener(SetVolume);
-        }
-    }
+            volumeSlider = FindObjectOfType<Slider>();
 
-    private void OnLevelWasLoaded(int level)
-    {
-        // After a new scene loads, find the new slider (if there is one)
-        volumeSlider = FindObjectOfType<Slider>();
-
-        if (volumeSlider != null)
-        {
-            float volume = PlayerPrefs.GetFloat("Volume", 0.75f);
-            volumeSlider.value = volume;
-            volumeSlider.onValueChanged.AddListener(SetVolume);
+            if (volumeSlider != null)
+            {
+                float volume = PlayerPrefs.GetFloat("Volume", 0.75f);
+                volumeSlider.value = volume;
+                SetVolume(volume);
+                volumeSlider.onValueChanged.AddListener(SetVolume);
+            }
         }
     }
 
