@@ -21,6 +21,21 @@ public class Spawner : MonoBehaviour
         [HideInInspector] public List<GameObject> activeInstances = new List<GameObject>();
     }
 
+    [System.Serializable]
+    public class BossType
+    {
+        public GameObject prefab;
+        [Tooltip("Time in seconds when this boss should spawn")]
+        public float spawnTime = 150f; // 2:30 minutes = 150 seconds
+        [Tooltip("Number of bosses to spawn at this time")]
+        public int spawnCount = 1;
+        [Tooltip("Minimum height to spawn this boss")]
+        public float minSpawnHeight = -10f;
+        [Tooltip("Maximum height to spawn this boss")]
+        public float maxSpawnHeight = 10f;
+        [HideInInspector] public bool hasSpawned = false;
+    }
+
     [Header("SPAWN POINTS")]
     [Tooltip("Parent object containing all spawn points")]
     public Transform spawnPointsParent;
@@ -30,6 +45,16 @@ public class Spawner : MonoBehaviour
     [Header("ENEMY SETTINGS")]
     [Tooltip("List of enemy types and their spawn rules")]
     public List<EnemyType> enemyTypes = new List<EnemyType>();
+
+    [Header("BOSS SETTINGS")]
+    [Tooltip("List of boss enemies to spawn at specific times")]
+    public List<BossType> bossTypes = new List<BossType>();
+    [Tooltip("Whether to activate special effects when a boss spawns")]
+    public bool enableBossEffects = true;
+    [Tooltip("Audio to play when boss spawns")]
+    public AudioClip bossSpawnSound;
+    [Tooltip("Volume of boss spawn sound")]
+    [Range(0f, 1f)] public float bossSpawnVolume = 0.8f;
 
     [Header("SPAWN SETTINGS")]
     [Tooltip("Time between spawn attempts")]
@@ -42,11 +67,15 @@ public class Spawner : MonoBehaviour
     public bool debugLogSpawnHeights = false;
     [Tooltip("Enable debug logs for enemy counts")]
     public bool debugLogEnemyCounts = true;
+    [Tooltip("Enable debug logs for boss spawns")]
+    public bool debugLogBossSpawns = true;
 
     private List<Transform> allSpawnPoints = new List<Transform>();
     private Transform playerTransform;
     private int totalSpawnWeight;
     private float cylinderRadius;
+    private float gameTimer = 0f;
+    private AudioSource audioSource;
 
     void Start()
     {
@@ -58,8 +87,10 @@ public class Spawner : MonoBehaviour
         FindPlayer();
         FindCylinder();
         ValidateEnemyTypes();
+        ValidateBossTypes();
         CacheSpawnPoints();
         ClearEnemyInstanceTracking();
+        SetupAudio();
 
         if (CheckSetupValidity())
         {
@@ -73,12 +104,34 @@ public class Spawner : MonoBehaviour
             }
 
             StartCoroutine(SpawnRoutine());
+            StartCoroutine(BossSpawnRoutine());
         }
         else
         {
             Debug.LogError("Spawner initialization failed - check errors above");
             enabled = false;
         }
+    }
+
+    void SetupAudio()
+    {
+        // Setup audio source if boss effects are enabled
+        if (enableBossEffects)
+        {
+            audioSource = GetComponent<AudioSource>();
+            if (audioSource == null)
+            {
+                audioSource = gameObject.AddComponent<AudioSource>();
+                audioSource.spatialBlend = 0f; // 2D sound
+                audioSource.playOnAwake = false;
+            }
+        }
+    }
+
+    void Update()
+    {
+        // Update game timer
+        gameTimer += Time.deltaTime;
     }
 
     void ClearEnemyInstanceTracking()
@@ -147,6 +200,29 @@ public class Spawner : MonoBehaviour
                 enemy.maxSpawnHeight = enemy.minSpawnHeight + 20f; // Auto-fix
             }
         }
+    }
+
+    void ValidateBossTypes()
+    {
+        // Remove null entries
+        int removed = bossTypes.RemoveAll(x => x.prefab == null);
+        if (removed > 0)
+        {
+            Debug.LogWarning($"Removed {removed} null boss entries");
+        }
+
+        foreach (BossType boss in bossTypes)
+        {
+            // Validate height ranges
+            if (boss.minSpawnHeight >= boss.maxSpawnHeight)
+            {
+                Debug.LogWarning($"Boss {boss.prefab.name} has invalid height range: min={boss.minSpawnHeight}, max={boss.maxSpawnHeight}. Fixing automatically.");
+                boss.maxSpawnHeight = boss.minSpawnHeight + 20f; // Auto-fix
+            }
+        }
+
+        // Sort bosses by spawn time
+        bossTypes = bossTypes.OrderBy(b => b.spawnTime).ToList();
     }
 
     void CacheSpawnPoints()
@@ -243,6 +319,113 @@ public class Spawner : MonoBehaviour
                 }
             }
         }
+    }
+
+    IEnumerator BossSpawnRoutine()
+    {
+        // Wait a frame to ensure everything is initialized
+        yield return null;
+
+        while (true)
+        {
+            // Check each boss type that hasn't spawned yet
+            foreach (BossType boss in bossTypes.Where(b => !b.hasSpawned))
+            {
+                // If it's time to spawn this boss
+                if (gameTimer >= boss.spawnTime)
+                {
+                    // Spawn the boss(es)
+                    for (int i = 0; i < boss.spawnCount; i++)
+                    {
+                        SpawnBoss(boss);
+
+                        // Small delay between multiple boss spawns
+                        if (i < boss.spawnCount - 1)
+                            yield return new WaitForSeconds(1.5f);
+                    }
+
+                    boss.hasSpawned = true;
+
+                    if (debugLogBossSpawns)
+                    {
+                        string minutes = Mathf.Floor(gameTimer / 60).ToString("00");
+                        string seconds = Mathf.Floor(gameTimer % 60).ToString("00");
+                        Debug.Log($"Boss wave spawned at {minutes}:{seconds} - {boss.spawnCount}x {boss.prefab.name}");
+                    }
+
+                    // Play boss spawn sound if enabled
+                    if (enableBossEffects && audioSource != null && bossSpawnSound != null)
+                    {
+                        audioSource.PlayOneShot(bossSpawnSound, bossSpawnVolume);
+                    }
+
+                    // Trigger any special effects for boss spawn
+                    if (enableBossEffects)
+                    {
+                        StartCoroutine(BossSpawnEffects());
+                    }
+                }
+            }
+
+            // Check every half second
+            yield return new WaitForSeconds(0.5f);
+        }
+    }
+
+    void SpawnBoss(BossType boss)
+    {
+        // Get spawn point furthest from player
+        Transform spawnPoint = GetOptimalSpawnPoint();
+        if (spawnPoint == null) return;
+
+        // Ensure spawn point is within boss height range
+        float spawnY = Mathf.Clamp(spawnPoint.position.y, boss.minSpawnHeight, boss.maxSpawnHeight);
+        Vector3 spawnPosition = spawnPoint.position;
+        spawnPosition.y = spawnY;
+
+        // Project onto cylinder surface
+        Vector3 spawnPos = ProjectOnCylinder(spawnPosition);
+
+        // Calculate rotation to face tangent to cylinder
+        Vector3 toCenter = cylinderTransform.position - spawnPos;
+        toCenter.y = 0;
+        Vector3 tangent = Vector3.Cross(toCenter.normalized, Vector3.up);
+        Quaternion spawnRotation = Quaternion.LookRotation(tangent, Vector3.up);
+
+        // Spawn the boss
+        GameObject spawnedBoss = Instantiate(boss.prefab, spawnPos, spawnRotation);
+
+        // You might want to add a special component or tag to bosses
+        if (!spawnedBoss.CompareTag("Boss"))
+        {
+            spawnedBoss.tag = "Boss";
+        }
+    }
+
+    IEnumerator BossSpawnEffects()
+    {
+        // Example: Screen shake effect
+        // You can replace this with whatever effects you want for boss spawns
+
+        float shakeDuration = 1.0f;
+        float elapsed = 0f;
+
+        // Find the main camera
+        Camera mainCamera = Camera.main;
+        if (mainCamera == null) yield break;
+
+        Vector3 originalPos = mainCamera.transform.position;
+
+        while (elapsed < shakeDuration)
+        {
+            float strength = (1 - (elapsed / shakeDuration)) * 0.2f;
+            mainCamera.transform.position = originalPos + Random.insideUnitSphere * strength;
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        mainCamera.transform.position = originalPos;
     }
 
     void CleanupDestroyedEnemies()
@@ -402,6 +585,19 @@ public class Spawner : MonoBehaviour
                 Debug.Log($"{enemyType.prefab.name} destroyed. Count: {enemyType.activeInstances.Count}/{enemyType.maxCount}");
             }
         }
+    }
+
+    // Helper methods for UI/Debug
+    public string GetFormattedGameTime()
+    {
+        int minutes = Mathf.FloorToInt(gameTimer / 60);
+        int seconds = Mathf.FloorToInt(gameTimer % 60);
+        return $"{minutes:00}:{seconds:00}";
+    }
+
+    public float GetGameTime()
+    {
+        return gameTimer;
     }
 }
 

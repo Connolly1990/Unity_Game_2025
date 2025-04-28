@@ -146,15 +146,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f56cd91db9a927a4ebf492d16af0b880, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 12.422888
+      value: 19.61501
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f56cd91db9a927a4ebf492d16af0b880, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 11.475931
+      value: 9.001169
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f56cd91db9a927a4ebf492d16af0b880, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 15.513159
+      value: 2.430766
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f56cd91db9a927a4ebf492d16af0b880, type: 3}
       propertyPath: m_LocalRotation.w
@@ -233,6 +233,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: f56cd91db9a927a4ebf492d16af0b880, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3360182248257960377}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: f56cd91db9a927a4ebf492d16af0b880, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4615008810401810804}
   m_SourcePrefab: {fileID: 100100000, guid: f56cd91db9a927a4ebf492d16af0b880, type: 3}
 --- !u!4 &8620814599354195246 stripped
 Transform:
@@ -340,7 +343,7 @@ MonoBehaviour:
   burstDelay: 0.05
   laserDamage: 1
   laserSpeed: 12
-  detectionRange: 15
+  maxFiringAngle: 45
   laserShotSound: {fileID: 8300000, guid: 52eb68ef8d275be4fb3dc866b981de3f, type: 3}
 --- !u!114 &3360182248257960377
 MonoBehaviour:
@@ -359,9 +362,22 @@ MonoBehaviour:
   missileFireRate: 5
   missileDamage: 1
   missileSpeed: 10
-  detectionRange: 20
+  maxFiringAngle: 60
   missileLaunchSound: {fileID: 8300000, guid: 2088645fafa13fe4c8e3ed3b4aad0cb6, type: 3}
   fireMissilesInSequence: 1
   missilesPerSequence: 2
   sequenceDelay: 2
   missileCooldown: 8
+--- !u!114 &4615008810401810804
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9000612765218523028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4b6eaa88e551904287d18bed28c03b9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  pointsValue: 1000

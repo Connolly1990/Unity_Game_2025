@@ -11783,11 +11783,28 @@ MonoBehaviour:
     maxCount: 4
     weightRangeStart: 0
     activeInstances: []
+  bossTypes:
+  - prefab: {fileID: 9000612765218523028, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
+    spawnTime: 150
+    spawnCount: 1
+    minSpawnHeight: 0
+    maxSpawnHeight: 0
+    hasSpawned: 0
+  - prefab: {fileID: 9000612765218523028, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
+    spawnTime: 210
+    spawnCount: 2
+    minSpawnHeight: 0
+    maxSpawnHeight: 0
+    hasSpawned: 0
+  enableBossEffects: 1
+  bossSpawnSound: {fileID: 8300000, guid: 4da498e6611d5b24a8c476a3dcbfe165, type: 3}
+  bossSpawnVolume: 0.8
   spawnCooldown: 3
   playerTag: Player
   debugDrawGizmos: 1
   debugLogSpawnHeights: 0
   debugLogEnemyCounts: 1
+  debugLogBossSpawns: 1
 --- !u!4 &311430737
 Transform:
   m_ObjectHideFlags: 0
@@ -57175,14 +57192,6 @@ PrefabInstance:
       propertyPath: cylinderTransform
       value: 
       objectReference: {fileID: 1136111876}
-    - target: {fileID: 5063319308242596705, guid: f010a16e0742e2e49b9e44ac436cd1c0, type: 3}
-      propertyPath: deathSound
-      value: 
-      objectReference: {fileID: 8300000, guid: 61c963ff574af3846bace355d835ba74, type: 3}
-    - target: {fileID: 5063319308242596705, guid: f010a16e0742e2e49b9e44ac436cd1c0, type: 3}
-      propertyPath: damageSound
-      value: 
-      objectReference: {fileID: 8300000, guid: 0a492dc3357816946a1561a1c5e3b2ce, type: 3}
     - target: {fileID: 7398101863961760288, guid: f010a16e0742e2e49b9e44ac436cd1c0, type: 3}
       propertyPath: m_Name
       value: Jet
@@ -59095,63 +59104,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 543450652083806359}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1001 &9006113188560024638
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 8620814599354195246, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 12.422888
-      objectReference: {fileID: 0}
-    - target: {fileID: 8620814599354195246, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 11.475931
-      objectReference: {fileID: 0}
-    - target: {fileID: 8620814599354195246, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 15.513159
-      objectReference: {fileID: 0}
-    - target: {fileID: 8620814599354195246, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8620814599354195246, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8620814599354195246, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8620814599354195246, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8620814599354195246, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8620814599354195246, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8620814599354195246, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 9000612765218523028, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
-      propertyPath: m_Name
-      value: Flying_Boss
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 717f3e1e3b1619b4991ae2ab5b568ab5, type: 3}
 --- !u!222 &9092538352500511217
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -59214,4 +59166,3 @@ SceneRoots:
   - {fileID: 1429215148}
   - {fileID: 982920570}
   - {fileID: 1007044110}
-  - {fileID: 9006113188560024638}

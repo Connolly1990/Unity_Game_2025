@@ -41,6 +41,9 @@ public class BossEnemy : MonoBehaviour
     private Color[] originalColors;
     private AudioSource audioSource;
     private bool isDying = false;
+    private Vector3 lastPlayerPosition;
+    private BossLaserCombat laserCombat;
+    private BossMissileCombat missileCombat;
 
     void Awake()
     {
@@ -70,6 +73,10 @@ public class BossEnemy : MonoBehaviour
         audioSource.spatialBlend = 0f; // 0 = 2D, 1 = 3D
         audioSource.playOnAwake = false;
         audioSource.loop = false;
+
+        // Cache combat components
+        laserCombat = GetComponent<BossLaserCombat>();
+        missileCombat = GetComponent<BossMissileCombat>();
     }
 
     void Start()
@@ -95,6 +102,7 @@ public class BossEnemy : MonoBehaviour
             if (playerObj != null)
             {
                 player = playerObj.transform;
+                lastPlayerPosition = player.position;
             }
             else
             {
@@ -126,16 +134,40 @@ public class BossEnemy : MonoBehaviour
         ForcePositionToMiddleGuideline();
 
         // Initialize combat scripts
-        BossLaserCombat laserCombat = GetComponent<BossLaserCombat>();
         if (laserCombat != null)
         {
             laserCombat.Initialize(player, cylinderTransform);
         }
 
-        BossMissileCombat missileCombat = GetComponent<BossMissileCombat>();
         if (missileCombat != null)
         {
             missileCombat.Initialize(player, cylinderTransform);
+        }
+
+        // Initial facing
+        if (player != null)
+        {
+            UpdateFacingDirection();
+        }
+    }
+
+    void Update()
+    {
+        // Update player reference in case it was destroyed and recreated
+        if (player == null)
+        {
+            GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+            if (playerObj != null)
+            {
+                player = playerObj.transform;
+
+                // Reinitialize combat scripts with new player reference
+                if (laserCombat != null)
+                    laserCombat.Initialize(player, cylinderTransform);
+
+                if (missileCombat != null)
+                    missileCombat.Initialize(player, cylinderTransform);
+            }
         }
     }
 
@@ -144,7 +176,16 @@ public class BossEnemy : MonoBehaviour
         if (cylinderTransform == null || middleGuideline == null || isDying) return;
 
         MoveAlongMiddleGuideline();
-        FacePlayer();
+
+        if (player != null)
+        {
+            // Only update facing if the player has moved significantly
+            if (Vector3.Distance(lastPlayerPosition, player.position) > 0.1f)
+            {
+                UpdateFacingDirection();
+                lastPlayerPosition = player.position;
+            }
+        }
     }
 
     void ForcePositionToMiddleGuideline()
@@ -170,30 +211,32 @@ public class BossEnemy : MonoBehaviour
         rb.MovePosition(newPosition);
     }
 
-    void FacePlayer()
+    void UpdateFacingDirection()
     {
-        if (player != null)
-        {
-            Vector3 dirToPlayer = player.position - transform.position;
-            // Ensure we're only rotating in the XZ plane
-            dirToPlayer.y = 0;
+        if (player == null) return;
 
-            if (dirToPlayer != Vector3.zero)
-            {
-                Quaternion lookRotation = Quaternion.LookRotation(dirToPlayer);
-                rb.MoveRotation(Quaternion.Slerp(rb.rotation, lookRotation, rotationSpeed * Time.deltaTime));
-            }
-        }
-        else
-        {
-            // Face the center of the cylinder if no player
-            Vector3 dirToCenter = new Vector3(0, transform.position.y, 0) - transform.position;
-            dirToCenter.y = 0;
+        // Calculate direction to player
+        Vector3 dirToPlayer = player.position - transform.position;
 
-            if (dirToCenter != Vector3.zero)
+        // Get tangent direction on cylinder (similar to player script)
+        Vector3 toCenter = cylinderTransform.position - transform.position;
+        toCenter.y = 0;
+
+        // Project direction to player onto a plane that's tangent to the cylinder
+        Vector3 projectedDirection = Vector3.ProjectOnPlane(dirToPlayer, toCenter.normalized);
+
+        // Calculate target rotation - account for any model-specific rotation
+        if (projectedDirection != Vector3.zero)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(projectedDirection, Vector3.up);
+
+            // Apply rotation smoothly
+            rb.MoveRotation(Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed * Time.deltaTime));
+
+            // If we have a separate model that needs different rotation
+            if (enemyModel != null && enemyModel != transform)
             {
-                Quaternion lookRotation = Quaternion.LookRotation(dirToCenter);
-                rb.MoveRotation(Quaternion.Slerp(rb.rotation, lookRotation, rotationSpeed * Time.deltaTime));
+                enemyModel.rotation = targetRotation;
             }
         }
     }
@@ -316,10 +359,14 @@ public class BossEnemy : MonoBehaviour
         }
     }
 
-    // Visualize detection range in editor
+    // Visualize detection range and facing direction in editor
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, 2f);
+
+        // Draw direction the boss is facing
+        Gizmos.color = Color.blue;
+        Gizmos.DrawRay(transform.position, transform.forward * 3f);
     }
 }

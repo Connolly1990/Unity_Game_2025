@@ -11,7 +11,7 @@ public class BossMissileCombat : MonoBehaviour
     public float missileFireRate = 5f;
     public int missileDamage = 2;
     public float missileSpeed = 10f;
-    public float detectionRange = 20f;
+    public float maxFiringAngle = 60f; // Maximum angle to still fire at player
     public AudioClip missileLaunchSound;
 
     [Header("Advanced Settings")]
@@ -28,6 +28,7 @@ public class BossMissileCombat : MonoBehaviour
     private AudioSource audioSource;
     private bool isInitialized = false;
     private bool isFiringSequence = false;
+    private BossEnemy bossController;
 
     void Awake()
     {
@@ -39,6 +40,9 @@ public class BossMissileCombat : MonoBehaviour
             audioSource.spatialBlend = 0f; // 2D sound
             audioSource.playOnAwake = false;
         }
+
+        // Get reference to the boss controller
+        bossController = GetComponent<BossEnemy>();
     }
 
     public void Initialize(Transform playerTransform, Transform cylinderRef)
@@ -57,21 +61,27 @@ public class BossMissileCombat : MonoBehaviour
 
     void Update()
     {
-        if (!isInitialized || player == null || isFiringSequence) return;
+        if (!isInitialized || player == null || isFiringSequence ||
+            bossController == null || bossController.isInvulnerable) return;
 
-        // Check if player is in range
-        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
-
-        if (distanceToPlayer <= detectionRange && Time.time >= nextFireTime)
+        // Check if it's time to fire
+        if (Time.time >= nextFireTime)
         {
-            if (fireMissilesInSequence)
+            // Check if boss is facing player within a reasonable angle
+            Vector3 dirToPlayer = (player.position - transform.position).normalized;
+            float angle = Vector3.Angle(transform.forward, dirToPlayer);
+
+            if (angle <= maxFiringAngle)
             {
-                StartCoroutine(FireMissileSequence());
-            }
-            else
-            {
-                FireMissile();
-                nextFireTime = Time.time + missileFireRate;
+                if (fireMissilesInSequence)
+                {
+                    StartCoroutine(FireMissileSequence());
+                }
+                else
+                {
+                    FireMissile();
+                    nextFireTime = Time.time + missileFireRate;
+                }
             }
         }
     }
@@ -94,12 +104,25 @@ public class BossMissileCombat : MonoBehaviour
     {
         if (missilePrefab == null || missileFirePoint == null || player == null) return;
 
-        // Direction to player
-        Vector3 directionToPlayer = (player.position - missileFirePoint.position).normalized;
+        // Calculate direction to player with slight prediction
+        Vector3 playerPos = player.position;
+        Vector3 playerVelocity = Vector3.zero;
 
-        // Create missile
+        // Try to get player velocity if it has a rigidbody
+        Rigidbody playerRb = player.GetComponent<Rigidbody>();
+        if (playerRb != null)
+        {
+            playerVelocity = playerRb.linearVelocity;
+            // Simple prediction - aim where the player will be in a fraction of a second
+            playerPos += playerVelocity * 0.5f;
+        }
+
+        Vector3 directionToPlayer = (playerPos - missileFirePoint.position).normalized;
+
+        // Create missile aligned with the fire point's forward direction
+        // but initialized with the direction to player
         GameObject missile = Instantiate(missilePrefab, missileFirePoint.position,
-                                        Quaternion.LookRotation(directionToPlayer));
+                                        missileFirePoint.rotation);
 
         // Initialize the BossMissile component
         BossMissile bossMissile = missile.GetComponent<BossMissile>();
@@ -108,6 +131,16 @@ public class BossMissileCombat : MonoBehaviour
             bossMissile.Initialize(directionToPlayer, cylinderTransform);
             bossMissile.explosionDamage = missileDamage;
             bossMissile.speed = missileSpeed;
+            // Removed the line setting target property that doesn't exist
+        }
+        else
+        {
+            // If no BossMissile component, add a simple force
+            Rigidbody missileRb = missile.GetComponent<Rigidbody>();
+            if (missileRb != null)
+            {
+                missileRb.linearVelocity = directionToPlayer * missileSpeed;
+            }
         }
 
         // Play missile launch sound
@@ -117,17 +150,53 @@ public class BossMissileCombat : MonoBehaviour
         }
     }
 
-    // Visualize detection range in editor
+    // Visualize firing angle in editor
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, detectionRange);
+
+        // Draw forward detection cone
+        if (maxFiringAngle > 0)
+        {
+            DrawArc(transform.position, transform.forward, maxFiringAngle, 3f);
+        }
 
         // Draw missile fire direction
         if (missileFirePoint != null)
         {
             Gizmos.color = Color.red;
             Gizmos.DrawLine(missileFirePoint.position, missileFirePoint.position + missileFirePoint.forward * 3f);
+        }
+    }
+
+    // Helper method to visualize arc
+    void DrawArc(Vector3 position, Vector3 direction, float angle, float radius)
+    {
+        Vector3 forward = direction.normalized;
+        Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
+
+        float angleRadians = angle * Mathf.Deg2Rad;
+        int segments = 15;
+
+        Vector3 prevPoint = position + forward * radius;
+
+        for (int i = 1; i <= segments; i++)
+        {
+            float t = (float)i / segments;
+            float currentAngle = angleRadians * t;
+            Vector3 point = position + (forward * Mathf.Cos(currentAngle) + right * Mathf.Sin(currentAngle)) * radius;
+            Gizmos.DrawLine(prevPoint, point);
+            prevPoint = point;
+        }
+
+        prevPoint = position + forward * radius;
+        for (int i = 1; i <= segments; i++)
+        {
+            float t = (float)i / segments;
+            float currentAngle = angleRadians * t;
+            Vector3 point = position + (forward * Mathf.Cos(currentAngle) - right * Mathf.Sin(currentAngle)) * radius;
+            Gizmos.DrawLine(prevPoint, point);
+            prevPoint = point;
         }
     }
 }

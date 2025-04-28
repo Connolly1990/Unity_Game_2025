@@ -524,7 +524,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71b31c9e2becf82409e920866f0edfb8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cylinderTransform: {fileID: 0}
+  cylinderTransform: {fileID: 2305134345780331110, guid: fd63df1fdc8762e4f968123dcffc8366, type: 3}
   playerModel: {fileID: 7917476434420484250}
   missileSpawnPoint: {fileID: 6871855324978470}
   moveSpeed: 5
