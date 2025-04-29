@@ -17,7 +17,6 @@ public class CylinderPlayerMovement : MonoBehaviour
     public float moveSpeed = 5f;
     public float rotationSpeed = 120f;
     public float boundaryOffset = 0.5f;
-    public float constantForwardSpeed = 1f; // Speed for constant forward movement
 
     [Header("Missile Settings")]
     public GameObject missilePrefab; // Drag your missile prefab here
@@ -29,13 +28,13 @@ public class CylinderPlayerMovement : MonoBehaviour
 
     public bool CanShoot { get; private set; } = false;
     public bool IsMoving { get; private set; } = false;
-    public int CurrentDirection { get; private set; } = -1; // Start with forward direction (-1)
+    public int CurrentDirection { get; private set; } = 0; // 0=idle, 1=forward, -1=backward
 
     private float currentAngle = 0f;
     private float cylinderRadius;
     private Rigidbody rb;
-    private float horizontalInput = 0;
-    private float verticalInput = 0;
+    private int horizontalDirection = 0;
+    private int verticalDirection = 0;
     private bool canMoveUp = true;
     private bool canMoveDown = true;
     private bool hasMovedSinceStart = false;
@@ -56,10 +55,7 @@ public class CylinderPlayerMovement : MonoBehaviour
         currentAngle = Mathf.Atan2(transform.position.x - cylinderTransform.position.x,
                                  transform.position.z - cylinderTransform.position.z);
         UpdatePositionAndRotation(transform.position.y, true);
-
-        // We start with the ability to shoot since we're constantly moving
-        CanShoot = true;
-        hasMovedSinceStart = true;
+        CanShoot = false;
 
         // Get or add AudioSource component for missile sounds
         audioSource = GetComponent<AudioSource>();
@@ -84,124 +80,161 @@ public class CylinderPlayerMovement : MonoBehaviour
 
     private void SetupVoiceControl()
     {
-        // Set up voice commands
+        // Set up voice commands with variations to improve recognition
         actions.Add("left", VoiceLeft);
         actions.Add("right", VoiceRight);
         actions.Add("up", VoiceUp);
+        actions.Add("upward", VoiceUp);  // Adding variation for "up"
+        actions.Add("move up", VoiceUp); // Adding another variation
         actions.Add("down", VoiceDown);
-        actions.Add("stop", VoiceStop);
         actions.Add("fire", VoiceFire);
+        actions.Add("stop", VoiceStop);  // Added stop command for convenience
 
         // Initialize and start the keyword recognizer
-        keywordRecognizer = new KeywordRecognizer(actions.Keys.ToArray());
+        keywordRecognizer = new KeywordRecognizer(actions.Keys.ToArray(), ConfidenceLevel.Low);
         keywordRecognizer.OnPhraseRecognized += RecognizedSpeech;
         keywordRecognizer.Start();
 
         Debug.Log("Voice control activated. Available commands: " + string.Join(", ", actions.Keys));
+
+        // Extra debug for "up" command specifically
+        Debug.Log("UP command specifically registered with recognizer");
     }
 
     private void RecognizedSpeech(PhraseRecognizedEventArgs speech)
     {
-        Debug.Log("Voice command recognized: " + speech.text);
-        actions[speech.text].Invoke();
+        string recognizedText = speech.text.ToLower().Trim();
+        Debug.Log("Voice command recognized: '" + recognizedText + "'");
+
+        // Extra debug for any "up"-related commands
+        if (recognizedText.Contains("up"))
+        {
+            Debug.Log("UP DETECTED in speech: '" + recognizedText + "'");
+        }
+
+        if (actions.ContainsKey(recognizedText))
+        {
+            Debug.Log("Executing command: " + recognizedText);
+            actions[recognizedText].Invoke();
+        }
+        else
+        {
+            Debug.LogWarning("Command not found in actions dictionary: '" + recognizedText + "'");
+            Debug.LogWarning("Available commands: " + string.Join(", ", actions.Keys));
+        }
     }
 
     // Voice command methods
     private void VoiceLeft()
     {
-        horizontalInput = 1; // Move left
-        StartCoroutine(ResetHorizontalInputAfterDelay(0.5f));
+        Debug.Log("Voice Left Command Executed");
+        horizontalDirection = 1;  // Changed to directly set direction
     }
 
     private void VoiceRight()
     {
-        horizontalInput = -1; // Move right
-        StartCoroutine(ResetHorizontalInputAfterDelay(0.5f));
+        Debug.Log("Voice Right Command Executed");
+        horizontalDirection = -1;  // Changed to directly set direction
     }
 
     private void VoiceUp()
     {
-        verticalInput = 1; // Move up
-        StartCoroutine(ResetVerticalInputAfterDelay(0.5f));
+        Debug.Log("**** VOICE UP COMMAND EXECUTED ****");
+        verticalDirection = 1;  // Changed to directly set direction
+
+        // Force movement for a short time to ensure it's recognized
+        StartCoroutine(EnsureMovementCoroutine("up"));
+    }
+
+    private IEnumerator EnsureMovementCoroutine(string direction)
+    {
+        Debug.Log("Ensuring " + direction + " movement is applied");
+
+        // For "up" direction, make sure any potential obstacles are cleared
+        if (direction == "up")
+        {
+            canMoveUp = true;
+        }
+
+        // Wait to ensure the movement is applied in the next FixedUpdate
+        yield return new WaitForFixedUpdate();
+        yield return new WaitForFixedUpdate();
+
+        Debug.Log("Movement should now be applied for: " + direction);
     }
 
     private void VoiceDown()
     {
-        verticalInput = -1; // Move down
-        StartCoroutine(ResetVerticalInputAfterDelay(0.5f));
+        Debug.Log("Voice Down Command Executed");
+        verticalDirection = -1;  // Changed to directly set direction
     }
 
     private void VoiceStop()
     {
-        horizontalInput = 0;
-        verticalInput = 0;
+        Debug.Log("Voice Stop Command Executed");
+        horizontalDirection = 0;
+        verticalDirection = 0;
     }
 
     private void VoiceFire()
     {
+        Debug.Log("Voice Fire Command Executed");
         if (CanShoot && Time.time >= nextFireTime)
         {
             FireMissile();
         }
     }
 
-    private IEnumerator ResetHorizontalInputAfterDelay(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        horizontalInput = 0;
-    }
-
-    private IEnumerator ResetVerticalInputAfterDelay(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        verticalInput = 0;
-    }
-
     void Update()
     {
-        // Only handle keyboard input if voice control is disabled
-        if (!useVoiceControl)
-        {
-            HandleInput();
-        }
-
+        HandleInput();
         HandleMissileFiring();
     }
 
     void FixedUpdate()
     {
-        // Apply constant forward movement - but separate from user input
-        // This applies a consistent forward movement at the specified constant speed
-        currentAngle -= constantForwardSpeed * Time.fixedDeltaTime / cylinderRadius;
-        currentAngle = Mathf.Repeat(currentAngle, 2f * Mathf.PI);
-
-        // Now apply any additional user input (keyboard or voice)
-        IsMoving = true; // Always moving because of constant forward motion
-
-        if (horizontalInput != 0)
+        IsMoving = horizontalDirection != 0 || verticalDirection != 0;
+        if (IsMoving && !hasMovedSinceStart)
         {
-            // Apply additional horizontal input from user
-            currentAngle += horizontalInput * moveSpeed * Time.fixedDeltaTime / cylinderRadius;
-            currentAngle = Mathf.Repeat(currentAngle, 2f * Mathf.PI);
+            hasMovedSinceStart = true;
+            CanShoot = true;
         }
 
-        // Calculate direction based on input
-        int rawDirection = horizontalInput != 0 ? (int)Mathf.Sign(horizontalInput) : -1;
+        // Update raw direction based on input
+        int rawDirection = (int)Mathf.Sign(horizontalDirection);
+
+        // Update position using angle (normalized to prevent overflow)
+        currentAngle += horizontalDirection * moveSpeed * Time.fixedDeltaTime / cylinderRadius;
+        currentAngle = Mathf.Repeat(currentAngle, 2f * Mathf.PI);
 
         // Calculate actual direction relative to cylinder tangent
         Vector3 toCenter = cylinderTransform.position - transform.position;
         toCenter.y = 0;
         Vector3 tangent = Vector3.Cross(toCenter.normalized, Vector3.up);
 
-        // Update current direction
-        CurrentDirection = rawDirection;
+        // This will ensure CurrentDirection is relative to the player's orientation on the cylinder
+        if (rawDirection != 0)
+            CurrentDirection = rawDirection;
 
-        // Vertical movement
+        // Vertical movement with boundary check
         float newY = rb.position.y;
-        if (verticalInput > 0 && canMoveUp)
-            newY += moveSpeed * Time.fixedDeltaTime;
-        else if (verticalInput < 0 && canMoveDown)
-            newY -= moveSpeed * Time.fixedDeltaTime;
+
+        // Check if can move up (add your boundary logic here if needed)
+        if (verticalDirection > 0)
+        {
+            // Add any upper boundary check here
+            canMoveUp = true; // Or implement your boundary check
+            if (canMoveUp)
+                newY += moveSpeed * Time.fixedDeltaTime;
+        }
+        // Check if can move down (add your boundary logic here if needed)
+        else if (verticalDirection < 0)
+        {
+            // Add any lower boundary check here
+            canMoveDown = true; // Or implement your boundary check
+            if (canMoveDown)
+                newY -= moveSpeed * Time.fixedDeltaTime;
+        }
 
         UpdatePositionAndRotation(newY);
         UpdateShipOrientation();
@@ -209,19 +242,17 @@ public class CylinderPlayerMovement : MonoBehaviour
 
     void HandleInput()
     {
-        // Get horizontal input (hold-based)
-        horizontalInput = 0;
-        if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow))
-            horizontalInput += 1;
-        if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow))
-            horizontalInput -= 1;
+        // Horizontal input (toggle-based)
+        if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
+            horizontalDirection = horizontalDirection == 1 ? 0 : 1;
+        if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
+            horizontalDirection = horizontalDirection == -1 ? 0 : -1;
 
-        // Get vertical input (hold-based)
-        verticalInput = 0;
-        if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow))
-            verticalInput += 1;
-        if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow))
-            verticalInput -= 1;
+        // Vertical input (toggle-based)
+        if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow))
+            verticalDirection = verticalDirection == 1 ? 0 : 1;
+        if (Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow))
+            verticalDirection = verticalDirection == -1 ? 0 : -1;
     }
 
     void HandleMissileFiring()
@@ -296,8 +327,7 @@ public class CylinderPlayerMovement : MonoBehaviour
 
     void UpdateShipOrientation()
     {
-        if (CurrentDirection == 0)
-            CurrentDirection = -1; // Default to forward
+        if (CurrentDirection == 0) return;
 
         Vector3 toCenter = cylinderTransform.position - transform.position;
         toCenter.y = 0;
