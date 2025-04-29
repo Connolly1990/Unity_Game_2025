@@ -29307,7 +29307,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5901bd2663b210741927889689a2276c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  winTime: 10
+  winTime: 300
   winMenu: {fileID: 982920566}
   timerText: {fileID: 265422544}
   afterCreditsSceneName: AfterCredits
