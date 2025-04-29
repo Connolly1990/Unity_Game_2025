@@ -48,4 +48,14 @@ public class PauseMenu : MonoBehaviour
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex - 1);
     }
+
+    // Quit button method
+    public void QuitButton()
+    {
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false; // Stop playmode in editor
+#else
+            Application.Quit(); // Quit the application if not in editor
+#endif
+    }
 }
