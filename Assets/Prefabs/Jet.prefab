@@ -479,6 +479,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e153c9ef961f89841b5f5c0249f45162, type: 3}
       insertIndex: -1
       addedObject: {fileID: 5063319308242596705}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e153c9ef961f89841b5f5c0249f45162, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4222133191456739938}
   m_SourcePrefab: {fileID: 100100000, guid: e153c9ef961f89841b5f5c0249f45162, type: 3}
 --- !u!1 &7398101863961760288 stripped
 GameObject:
@@ -600,6 +603,31 @@ MonoBehaviour:
   damageTags:
   - Enemy
   - EnemyLaser
+--- !u!114 &4222133191456739938
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7398101863961760288}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2724ba4af34bba4f979f6f3bdf5f67a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerMovement: {fileID: 888489341603870471}
+  playerModel: {fileID: 7917476434420484250}
+  dodgeParticleEffect: {fileID: 0}
+  audioSource: {fileID: 0}
+  dodgeSoundEffect: {fileID: 0}
+  doubleTapWindow: 0.3
+  dodgeDistance: 10
+  dodgeDuration: 1
+  dodgeCooldown: 2
+  iFrameDuration: 1
+  flashInterval: 0.1
+  rollRotationSpeed: 180
+  showDebugInfo: 0
 --- !u!4 &7917476434420484250 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: e153c9ef961f89841b5f5c0249f45162, type: 3}

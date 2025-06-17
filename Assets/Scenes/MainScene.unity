@@ -60839,6 +60839,26 @@ PrefabInstance:
       propertyPath: cylinderTransform
       value: 
       objectReference: {fileID: 1136111876}
+    - target: {fileID: 4222133191456739938, guid: f010a16e0742e2e49b9e44ac436cd1c0, type: 3}
+      propertyPath: dodgeCooldown
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4222133191456739938, guid: f010a16e0742e2e49b9e44ac436cd1c0, type: 3}
+      propertyPath: dodgeDistance
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 4222133191456739938, guid: f010a16e0742e2e49b9e44ac436cd1c0, type: 3}
+      propertyPath: dodgeDuration
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4222133191456739938, guid: f010a16e0742e2e49b9e44ac436cd1c0, type: 3}
+      propertyPath: iFrameDuration
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4222133191456739938, guid: f010a16e0742e2e49b9e44ac436cd1c0, type: 3}
+      propertyPath: rollRotationSpeed
+      value: 180
+      objectReference: {fileID: 0}
     - target: {fileID: 7398101863961760288, guid: f010a16e0742e2e49b9e44ac436cd1c0, type: 3}
       propertyPath: m_Name
       value: Jet

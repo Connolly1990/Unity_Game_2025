@@ -129,6 +129,11 @@ public class CylinderPlayerMovement : MonoBehaviour
         }
     }
 
+    public void SetCurrentAngle(float newAngle)
+    {
+        currentAngle = newAngle;
+    }
+
     void FireMissile()
     {
         if (missilePrefab == null)
