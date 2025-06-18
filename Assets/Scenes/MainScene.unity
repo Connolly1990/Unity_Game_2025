@@ -12241,6 +12241,21 @@ MonoBehaviour:
   healthIconMinHeight: -10
   healthIconMaxHeight: 10
   debugLogHealthIcons: 1
+  powerUpTypes:
+  - prefab: {fileID: 0}
+    powerUpName: 
+    spawnWeight: 0
+    spawnInterval: 0
+    maxCount: 0
+    minSpawnHeight: 0
+    maxSpawnHeight: 0
+    spawnSFX: {fileID: 0}
+    collectSFX: {fileID: 0}
+    spawnVolume: 0.6
+    activeInstances: []
+    lastSpawnTime: 0
+  powerUpSpawnRateMultiplier: 1
+  debugLogPowerUps: 1
   spawnCooldown: 3
   playerTag: Player
   debugDrawGizmos: 1

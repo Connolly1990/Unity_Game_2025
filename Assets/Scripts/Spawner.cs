@@ -36,6 +36,38 @@ public class Spawner : MonoBehaviour
         [HideInInspector] public bool hasSpawned = false;
     }
 
+    [System.Serializable]
+    public class PowerUpType
+    {
+        [Header("Basic Settings")]
+        public GameObject prefab;
+        [Tooltip("Name of the power-up for identification")]
+        public string powerUpName = "Power-Up";
+
+        [Header("Spawn Settings")]
+        [Tooltip("Relative spawn chance compared to other power-ups")]
+        [Range(1, 100)] public int spawnWeight = 25;
+        [Tooltip("Time between spawns of this power-up type (seconds)")]
+        public float spawnInterval = 45f;
+        [Tooltip("Maximum number of this power-up type allowed at once")]
+        public int maxCount = 2;
+        [Tooltip("Minimum height to spawn this power-up")]
+        public float minSpawnHeight = -10f;
+        [Tooltip("Maximum height to spawn this power-up")]
+        public float maxSpawnHeight = 10f;
+
+        [Header("Audio")]
+        [Tooltip("Sound to play when this power-up spawns")]
+        public AudioClip spawnSFX;
+        [Tooltip("Sound to play when this power-up is collected")]
+        public AudioClip collectSFX;
+        [Tooltip("Volume of spawn sound")]
+        [Range(0f, 1f)] public float spawnVolume = 0.6f;
+
+        [HideInInspector] public List<GameObject> activeInstances = new List<GameObject>();
+        [HideInInspector] public float lastSpawnTime = 0f;
+    }
+
     [Header("SPAWN POINTS")]
     [Tooltip("Parent object containing all spawn points")]
     public Transform spawnPointsParent;
@@ -69,6 +101,14 @@ public class Spawner : MonoBehaviour
     public float healthIconMaxHeight = 10f;
     [Tooltip("Enable debug logs for health icon spawns")]
     public bool debugLogHealthIcons = true;
+
+    [Header("POWER-UP SETTINGS")]
+    [Tooltip("List of power-up types and their spawn rules")]
+    public List<PowerUpType> powerUpTypes = new List<PowerUpType>();
+    [Tooltip("Global power-up spawn rate multiplier")]
+    [Range(0.1f, 3f)] public float powerUpSpawnRateMultiplier = 1f;
+    [Tooltip("Enable debug logs for power-up spawns")]
+    public bool debugLogPowerUps = true;
 
     [Header("SPAWN SETTINGS")]
     [Tooltip("Time between spawn attempts")]
@@ -105,13 +145,13 @@ public class Spawner : MonoBehaviour
         ValidateEnemyTypes();
         ValidateBossTypes();
         ValidateHealthIconSettings();
+        ValidatePowerUpSettings();
         CacheSpawnPoints();
-        ClearEnemyInstanceTracking();
+        ClearInstanceTracking();
         SetupAudio();
 
         if (CheckSetupValidity())
         {
-            // Debug log for spawn point heights
             if (debugLogSpawnHeights)
             {
                 foreach (Transform point in allSpawnPoints)
@@ -123,6 +163,7 @@ public class Spawner : MonoBehaviour
             StartCoroutine(SpawnRoutine());
             StartCoroutine(BossSpawnRoutine());
             StartCoroutine(HealthIconSpawnRoutine());
+            StartCoroutine(PowerUpSpawnRoutine());
         }
         else
         {
@@ -139,14 +180,12 @@ public class Spawner : MonoBehaviour
             return;
         }
 
-        // Validate height ranges
         if (healthIconMinHeight >= healthIconMaxHeight)
         {
             Debug.LogWarning($"Health icon has invalid height range: min={healthIconMinHeight}, max={healthIconMaxHeight}. Fixing automatically.");
-            healthIconMaxHeight = healthIconMinHeight + 20f; // Auto-fix
+            healthIconMaxHeight = healthIconMinHeight + 20f;
         }
 
-        // Ensure the prefab has the HealthIcon component or add it
         HealthIconTracker tracker = healthIconPrefab.GetComponent<HealthIconTracker>();
         if (tracker == null)
         {
@@ -154,16 +193,43 @@ public class Spawner : MonoBehaviour
         }
     }
 
+    void ValidatePowerUpSettings()
+    {
+        int removed = powerUpTypes.RemoveAll(x => x.prefab == null);
+        if (removed > 0)
+        {
+            Debug.LogWarning($"Removed {removed} null power-up entries");
+        }
+
+        foreach (PowerUpType powerUp in powerUpTypes)
+        {
+            if (powerUp.minSpawnHeight >= powerUp.maxSpawnHeight)
+            {
+                Debug.LogWarning($"Power-up {powerUp.powerUpName} has invalid height range: min={powerUp.minSpawnHeight}, max={powerUp.maxSpawnHeight}. Fixing automatically.");
+                powerUp.maxSpawnHeight = powerUp.minSpawnHeight + 20f;
+            }
+
+            if (powerUp.spawnInterval < 5f)
+            {
+                Debug.LogWarning($"Power-up {powerUp.powerUpName} has very short spawn interval ({powerUp.spawnInterval}s). Consider increasing it.");
+            }
+        }
+
+        if (debugLogPowerUps && powerUpTypes.Count > 0)
+        {
+            Debug.Log($"Initialized {powerUpTypes.Count} power-up types");
+        }
+    }
+
     void SetupAudio()
     {
-        // Setup audio source if boss effects are enabled
-        if (enableBossEffects)
+        if (enableBossEffects || powerUpTypes.Count > 0)
         {
             audioSource = GetComponent<AudioSource>();
             if (audioSource == null)
             {
                 audioSource = gameObject.AddComponent<AudioSource>();
-                audioSource.spatialBlend = 0f; // 2D sound
+                audioSource.spatialBlend = 0f;
                 audioSource.playOnAwake = false;
             }
         }
@@ -171,18 +237,21 @@ public class Spawner : MonoBehaviour
 
     void Update()
     {
-        // Update game timer
         gameTimer += Time.deltaTime;
     }
 
-    void ClearEnemyInstanceTracking()
+    void ClearInstanceTracking()
     {
-        // Clear any stale references
         foreach (var enemyType in enemyTypes)
         {
             enemyType.activeInstances.Clear();
         }
         activeHealthIcons.Clear();
+
+        foreach (var powerUp in powerUpTypes)
+        {
+            powerUp.activeInstances.Clear();
+        }
     }
 
     void FindPlayer()
@@ -215,7 +284,6 @@ public class Spawner : MonoBehaviour
 
     void ValidateEnemyTypes()
     {
-        // Remove null entries
         int removed = enemyTypes.RemoveAll(x => x.prefab == null);
         if (removed > 0)
         {
@@ -228,25 +296,22 @@ public class Spawner : MonoBehaviour
             return;
         }
 
-        // Calculate weight ranges for probability distribution
         totalSpawnWeight = 0;
         foreach (EnemyType enemy in enemyTypes)
         {
             enemy.weightRangeStart = totalSpawnWeight;
             totalSpawnWeight += enemy.spawnWeight;
 
-            // Validate height ranges
             if (enemy.minSpawnHeight >= enemy.maxSpawnHeight)
             {
                 Debug.LogWarning($"Enemy {enemy.prefab.name} has invalid height range: min={enemy.minSpawnHeight}, max={enemy.maxSpawnHeight}. Fixing automatically.");
-                enemy.maxSpawnHeight = enemy.minSpawnHeight + 20f; // Auto-fix
+                enemy.maxSpawnHeight = enemy.minSpawnHeight + 20f;
             }
         }
     }
 
     void ValidateBossTypes()
     {
-        // Remove null entries
         int removed = bossTypes.RemoveAll(x => x.prefab == null);
         if (removed > 0)
         {
@@ -255,15 +320,13 @@ public class Spawner : MonoBehaviour
 
         foreach (BossType boss in bossTypes)
         {
-            // Validate height ranges
             if (boss.minSpawnHeight >= boss.maxSpawnHeight)
             {
                 Debug.LogWarning($"Boss {boss.prefab.name} has invalid height range: min={boss.minSpawnHeight}, max={boss.maxSpawnHeight}. Fixing automatically.");
-                boss.maxSpawnHeight = boss.minSpawnHeight + 20f; // Auto-fix
+                boss.maxSpawnHeight = boss.minSpawnHeight + 20f;
             }
         }
 
-        // Sort bosses by spawn time
         bossTypes = bossTypes.OrderBy(b => b.spawnTime).ToList();
     }
 
@@ -277,7 +340,6 @@ public class Spawner : MonoBehaviour
             return;
         }
 
-        // Get all spawn points from hierarchy
         foreach (Transform mainSpawn in spawnPointsParent)
         {
             allSpawnPoints.Add(mainSpawn);
@@ -307,10 +369,8 @@ public class Spawner : MonoBehaviour
         {
             yield return new WaitForSeconds(spawnCooldown);
 
-            // Clean up any destroyed enemies from tracking lists
             CleanupDestroyedEnemies();
 
-            // Try to find an enemy type that hasn't reached its limit
             List<EnemyType> availableTypes = enemyTypes
                 .Where(e => e.activeInstances.Count < e.maxCount)
                 .ToList();
@@ -327,26 +387,19 @@ public class Spawner : MonoBehaviour
             Transform spawnPoint = GetOptimalSpawnPoint();
             if (spawnPoint == null) continue;
 
-            // Get position on cylinder surface
             Vector3 spawnPos = ProjectOnCylinder(spawnPoint.position);
-
-            // Only consider enemy types that haven't reached their limit
             EnemyType enemyToSpawn = SelectRandomEnemyWithLimit(spawnPos.y, availableTypes);
 
             if (enemyToSpawn != null)
             {
-                // Calculate rotation to face tangent to cylinder
                 Vector3 toCenter = cylinderTransform.position - spawnPos;
                 toCenter.y = 0;
                 Vector3 tangent = Vector3.Cross(toCenter.normalized, Vector3.up);
                 Quaternion spawnRotation = Quaternion.LookRotation(tangent, Vector3.up);
 
                 GameObject spawnedEnemy = Instantiate(enemyToSpawn.prefab, spawnPos, spawnRotation);
-
-                // Add enemy to tracking list
                 enemyToSpawn.activeInstances.Add(spawnedEnemy);
 
-                // Add component to handle enemy destruction tracking
                 EnemyTracker tracker = spawnedEnemy.AddComponent<EnemyTracker>();
                 tracker.Initialize(this, enemyToSpawn);
 
@@ -365,53 +418,68 @@ public class Spawner : MonoBehaviour
 
     IEnumerator HealthIconSpawnRoutine()
     {
-        // Wait for initial delay before first health icon spawn
         yield return new WaitForSeconds(healthIconSpawnInterval);
 
         while (true)
         {
-            // Check if we can spawn a health icon
             if (healthIconPrefab != null && CanSpawnHealthIcon())
             {
                 SpawnHealthIcon();
             }
 
-            // Wait for the next spawn interval
             yield return new WaitForSeconds(healthIconSpawnInterval);
+        }
+    }
+
+    IEnumerator PowerUpSpawnRoutine()
+    {
+        yield return new WaitForSeconds(15f);
+
+        while (true)
+        {
+            foreach (PowerUpType powerUp in powerUpTypes)
+            {
+                if (CanSpawnPowerUp(powerUp))
+                {
+                    SpawnPowerUp(powerUp);
+                }
+            }
+
+            yield return new WaitForSeconds(2f);
         }
     }
 
     bool CanSpawnHealthIcon()
     {
-        // Clean up destroyed health icons first
         CleanupDestroyedHealthIcons();
-
-        // Check if we're under the limit
         return activeHealthIcons.Count < maxHealthIcons;
+    }
+
+    bool CanSpawnPowerUp(PowerUpType powerUp)
+    {
+        CleanupDestroyedPowerUps(powerUp);
+        if (powerUp.activeInstances.Count >= powerUp.maxCount)
+            return false;
+
+        float adjustedInterval = powerUp.spawnInterval / powerUpSpawnRateMultiplier;
+        return (gameTimer - powerUp.lastSpawnTime) >= adjustedInterval;
     }
 
     void SpawnHealthIcon()
     {
-        // Get a random spawn point
         Transform spawnPoint = GetRandomSpawnPoint();
         if (spawnPoint == null) return;
 
-        // Clamp spawn height to health icon range
         float spawnY = Mathf.Clamp(spawnPoint.position.y, healthIconMinHeight, healthIconMaxHeight);
         Vector3 spawnPosition = spawnPoint.position;
         spawnPosition.y = spawnY;
 
-        // Project onto cylinder surface
         Vector3 spawnPos = ProjectOnCylinder(spawnPosition);
-
-        // Spawn the health icon with no rotation (or slight random rotation for variety)
         Quaternion spawnRotation = Quaternion.Euler(0, Random.Range(0, 360), 0);
         GameObject spawnedHealthIcon = Instantiate(healthIconPrefab, spawnPos, spawnRotation);
 
-        // Add to tracking list
         activeHealthIcons.Add(spawnedHealthIcon);
 
-        // Add tracker component if it doesn't exist
         HealthIconTracker tracker = spawnedHealthIcon.GetComponent<HealthIconTracker>();
         if (tracker == null)
         {
@@ -419,12 +487,46 @@ public class Spawner : MonoBehaviour
         }
         tracker.Initialize(this);
 
-        // Update last spawn time
         lastHealthIconSpawnTime = gameTimer;
 
         if (debugLogHealthIcons)
         {
             Debug.Log($"Health icon spawned at height {spawnPos.y}. Active count: {activeHealthIcons.Count}/{maxHealthIcons}");
+        }
+    }
+
+    void SpawnPowerUp(PowerUpType powerUp)
+    {
+        Transform spawnPoint = GetOptimalSpawnPoint();
+        if (spawnPoint == null) return;
+
+        float spawnY = Mathf.Clamp(spawnPoint.position.y, powerUp.minSpawnHeight, powerUp.maxSpawnHeight);
+        Vector3 spawnPosition = spawnPoint.position;
+        spawnPosition.y = spawnY;
+
+        Vector3 spawnPos = ProjectOnCylinder(spawnPosition);
+        Quaternion spawnRotation = Quaternion.Euler(0, Random.Range(0, 360), 0);
+        GameObject spawnedPowerUp = Instantiate(powerUp.prefab, spawnPos, spawnRotation);
+
+        powerUp.activeInstances.Add(spawnedPowerUp);
+
+        PowerUpTracker tracker = spawnedPowerUp.GetComponent<PowerUpTracker>();
+        if (tracker == null)
+        {
+            tracker = spawnedPowerUp.AddComponent<PowerUpTracker>();
+        }
+        tracker.Initialize(this, powerUp);
+
+        powerUp.lastSpawnTime = gameTimer;
+
+        if (audioSource != null && powerUp.spawnSFX != null)
+        {
+            audioSource.PlayOneShot(powerUp.spawnSFX, powerUp.spawnVolume);
+        }
+
+        if (debugLogPowerUps)
+        {
+            Debug.Log($"Power-up '{powerUp.powerUpName}' spawned at height {spawnPos.y}. Active count: {powerUp.activeInstances.Count}/{powerUp.maxCount}");
         }
     }
 
@@ -443,25 +545,29 @@ public class Spawner : MonoBehaviour
         }
     }
 
+    void CleanupDestroyedPowerUps(PowerUpType powerUp)
+    {
+        int removed = powerUp.activeInstances.RemoveAll(p => p == null);
+        if (removed > 0 && debugLogPowerUps)
+        {
+            Debug.Log($"Cleaned up {removed} destroyed {powerUp.powerUpName} power-ups");
+        }
+    }
+
     IEnumerator BossSpawnRoutine()
     {
-        // Wait a frame to ensure everything is initialized
         yield return null;
 
         while (true)
         {
-            // Check each boss type that hasn't spawned yet
             foreach (BossType boss in bossTypes.Where(b => !b.hasSpawned))
             {
-                // If it's time to spawn this boss
                 if (gameTimer >= boss.spawnTime)
                 {
-                    // Spawn the boss(es)
                     for (int i = 0; i < boss.spawnCount; i++)
                     {
                         SpawnBoss(boss);
 
-                        // Small delay between multiple boss spawns
                         if (i < boss.spawnCount - 1)
                             yield return new WaitForSeconds(1.5f);
                     }
@@ -475,13 +581,11 @@ public class Spawner : MonoBehaviour
                         Debug.Log($"Boss wave spawned at {minutes}:{seconds} - {boss.spawnCount}x {boss.prefab.name}");
                     }
 
-                    // Play boss spawn sound if enabled
                     if (enableBossEffects && audioSource != null && bossSpawnSound != null)
                     {
                         audioSource.PlayOneShot(bossSpawnSound, bossSpawnVolume);
                     }
 
-                    // Trigger any special effects for boss spawn
                     if (enableBossEffects)
                     {
                         StartCoroutine(BossSpawnEffects());
@@ -489,35 +593,28 @@ public class Spawner : MonoBehaviour
                 }
             }
 
-            // Check every half second
             yield return new WaitForSeconds(0.5f);
         }
     }
 
     void SpawnBoss(BossType boss)
     {
-        // Get spawn point furthest from player
         Transform spawnPoint = GetOptimalSpawnPoint();
         if (spawnPoint == null) return;
 
-        // Ensure spawn point is within boss height range
         float spawnY = Mathf.Clamp(spawnPoint.position.y, boss.minSpawnHeight, boss.maxSpawnHeight);
         Vector3 spawnPosition = spawnPoint.position;
         spawnPosition.y = spawnY;
 
-        // Project onto cylinder surface
         Vector3 spawnPos = ProjectOnCylinder(spawnPosition);
 
-        // Calculate rotation to face tangent to cylinder
         Vector3 toCenter = cylinderTransform.position - spawnPos;
         toCenter.y = 0;
         Vector3 tangent = Vector3.Cross(toCenter.normalized, Vector3.up);
         Quaternion spawnRotation = Quaternion.LookRotation(tangent, Vector3.up);
 
-        // Spawn the boss
         GameObject spawnedBoss = Instantiate(boss.prefab, spawnPos, spawnRotation);
 
-        // You might want to add a special component or tag to bosses
         if (!spawnedBoss.CompareTag("Boss"))
         {
             spawnedBoss.tag = "Boss";
@@ -526,13 +623,9 @@ public class Spawner : MonoBehaviour
 
     IEnumerator BossSpawnEffects()
     {
-        // Example: Screen shake effect
-        // You can replace this with whatever effects you want for boss spawns
-
         float shakeDuration = 1.0f;
         float elapsed = 0f;
 
-        // Find the main camera
         Camera mainCamera = Camera.main;
         if (mainCamera == null) yield break;
 
@@ -554,7 +647,6 @@ public class Spawner : MonoBehaviour
     {
         foreach (var enemyType in enemyTypes)
         {
-            // Remove null entries (destroyed enemies)
             int removed = enemyType.activeInstances.RemoveAll(e => e == null);
             if (removed > 0 && debugLogEnemyCounts)
             {
@@ -567,11 +659,9 @@ public class Spawner : MonoBehaviour
     {
         if (cylinderTransform == null) return position;
 
-        // Find angle on cylinder
         Vector3 toCylinder = position - cylinderTransform.position;
         float angle = Mathf.Atan2(toCylinder.x, toCylinder.z);
 
-        // Project to cylinder surface
         return new Vector3(
             cylinderTransform.position.x + cylinderRadius * Mathf.Sin(angle),
             position.y,
@@ -584,7 +674,6 @@ public class Spawner : MonoBehaviour
         if (allSpawnPoints.Count == 0 || playerTransform == null)
             return null;
 
-        // Find spawn point furthest from player (considering we're on a cylinder)
         return allSpawnPoints
             .OrderByDescending(p => CalculateCylinderDistance(p.position, playerTransform.position))
             .ThenByDescending(p => Mathf.Abs(p.position.y - playerTransform.position.y))
@@ -595,28 +684,20 @@ public class Spawner : MonoBehaviour
     {
         if (cylinderTransform == null) return Vector3.Distance(point1, point2);
 
-        // Calculate angles on cylinder
         Vector3 toPoint1 = point1 - cylinderTransform.position;
         Vector3 toPoint2 = point2 - cylinderTransform.position;
         float angle1 = Mathf.Atan2(toPoint1.x, toPoint1.z);
         float angle2 = Mathf.Atan2(toPoint2.x, toPoint2.z);
 
-        // Calculate angular distance (shortest way around the cylinder)
         float angleDiff = Mathf.Abs(Mathf.DeltaAngle(angle1 * Mathf.Rad2Deg, angle2 * Mathf.Rad2Deg) * Mathf.Deg2Rad);
-
-        // Convert to arc length
         float arcDistance = angleDiff * cylinderRadius;
-
-        // Also consider the y-distance
         float yDistance = Mathf.Abs(point1.y - point2.y);
 
-        // Combine distances (Pythagoras)
         return Mathf.Sqrt(arcDistance * arcDistance + yDistance * yDistance);
     }
 
     EnemyType SelectRandomEnemyWithLimit(float spawnHeight, List<EnemyType> availableTypes)
     {
-        // Get enemies valid for this height and under their limit
         List<EnemyType> validEnemies = new List<EnemyType>();
         int validWeightTotal = 0;
 
@@ -637,8 +718,7 @@ public class Spawner : MonoBehaviour
                 Debug.LogWarning($"No valid enemies for height {spawnHeight}. Adjusting height restrictions to include this spawn point.");
             }
 
-            // Automatically adjust the height range of enemies to include this spawn point
-            float margin = 0.1f; // Small buffer
+            float margin = 0.1f;
             foreach (EnemyType enemy in availableTypes)
             {
                 if (spawnHeight < enemy.minSpawnHeight)
@@ -659,7 +739,6 @@ public class Spawner : MonoBehaviour
             return null;
         }
 
-        // Weighted random selection
         int randomWeight = Random.Range(0, validWeightTotal);
         int accumulatedWeight = 0;
 
@@ -682,7 +761,6 @@ public class Spawner : MonoBehaviour
         Gizmos.color = Color.green;
         foreach (Transform spawn in spawnPointsParent)
         {
-            // If cylinder exists, project spawn point onto it
             Vector3 spawnPos = cylinderTransform != null ? ProjectOnCylinder(spawn.position) : spawn.position;
             Gizmos.DrawWireSphere(spawnPos, 0.3f);
 
@@ -694,7 +772,6 @@ public class Spawner : MonoBehaviour
             }
         }
 
-        // Draw health icon gizmos in blue
         if (healthIconPrefab != null)
         {
             Gizmos.color = Color.blue;
@@ -708,7 +785,6 @@ public class Spawner : MonoBehaviour
         }
     }
 
-    // Method to be called by the EnemyTracker component when an enemy is destroyed
     public void OnEnemyDestroyed(GameObject enemy, EnemyType enemyType)
     {
         if (enemyType != null && enemyType.activeInstances.Contains(enemy))
@@ -722,7 +798,6 @@ public class Spawner : MonoBehaviour
         }
     }
 
-    // Method to be called by the HealthIconTracker component when a health icon is destroyed
     public void OnHealthIconDestroyed(GameObject healthIcon)
     {
         if (activeHealthIcons.Contains(healthIcon))
@@ -736,27 +811,20 @@ public class Spawner : MonoBehaviour
         }
     }
 
-    // Helper methods for UI/Debug
-    public string GetFormattedGameTime()
+    public void OnPowerUpDestroyed(GameObject powerUpObj, PowerUpType powerUpType)
     {
-        int minutes = Mathf.FloorToInt(gameTimer / 60);
-        int seconds = Mathf.FloorToInt(gameTimer % 60);
-        return $"{minutes:00}:{seconds:00}";
-    }
+        if (powerUpType != null && powerUpType.activeInstances.Contains(powerUpObj))
+        {
+            powerUpType.activeInstances.Remove(powerUpObj);
 
-    public float GetGameTime()
-    {
-        return gameTimer;
-    }
-
-    public int GetActiveHealthIconCount()
-    {
-        CleanupDestroyedHealthIcons();
-        return activeHealthIcons.Count;
+            if (debugLogPowerUps)
+            {
+                Debug.Log($"Power-up '{powerUpType.powerUpName}' destroyed. Count: {powerUpType.activeInstances.Count}/{powerUpType.maxCount}");
+            }
+        }
     }
 }
 
-// Helper component to track when enemies are destroyed
 public class EnemyTracker : MonoBehaviour
 {
     private Spawner spawner;
@@ -777,7 +845,6 @@ public class EnemyTracker : MonoBehaviour
     }
 }
 
-// Helper component to track when health icons are destroyed
 public class HealthIconTracker : MonoBehaviour
 {
     private Spawner spawner;
@@ -792,6 +859,26 @@ public class HealthIconTracker : MonoBehaviour
         if (spawner != null)
         {
             spawner.OnHealthIconDestroyed(gameObject);
+        }
+    }
+}
+
+public class PowerUpTracker : MonoBehaviour
+{
+    private Spawner spawner;
+    private Spawner.PowerUpType powerUpType;
+
+    public void Initialize(Spawner spawnerRef, Spawner.PowerUpType type)
+    {
+        spawner = spawnerRef;
+        powerUpType = type;
+    }
+
+    void OnDestroy()
+    {
+        if (spawner != null)
+        {
+            spawner.OnPowerUpDestroyed(gameObject, powerUpType);
         }
     }
 }
