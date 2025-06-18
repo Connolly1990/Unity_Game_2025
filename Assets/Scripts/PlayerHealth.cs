@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 
@@ -52,7 +52,6 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
-    // Rest of your code remains the same...
     void Start()
     {
         currentHealth = maxHealth;
@@ -140,7 +139,6 @@ public class PlayerHealth : MonoBehaviour
         {
             if (heartImages[i] != null)
             {
-                // Simply toggle the GameObject's active state
                 heartImages[i].SetActive(i < currentHealth);
             }
         }
@@ -159,7 +157,6 @@ public class PlayerHealth : MonoBehaviour
             GameManager.Instance.PlayerDied(deathPosition);
         }
 
-        
         Object.FindFirstObjectByType<DeathMenuManager>().ShowDeathMenu();
     }
 
@@ -173,5 +170,16 @@ public class PlayerHealth : MonoBehaviour
     {
         currentHealth = maxHealth;
         UpdateHealthDisplay();
+    }
+
+    // ✅ Safe Public Getters (for health pickups, UI, etc.)
+    public int CurrentHealth
+    {
+        get { return currentHealth; }
+    }
+
+    public int MaxHealth
+    {
+        get { return maxHealth; }
     }
 }
