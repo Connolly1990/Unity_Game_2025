@@ -527,7 +527,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71b31c9e2becf82409e920866f0edfb8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cylinderTransform: {fileID: 2305134345780331110, guid: fd63df1fdc8762e4f968123dcffc8366, type: 3}
+  cylinderTransform: {fileID: 0}
   playerModel: {fileID: 7917476434420484250}
   missileSpawnPoint: {fileID: 6871855324978470}
   moveSpeed: 5
@@ -536,6 +536,7 @@ MonoBehaviour:
   missilePrefab: {fileID: 1710280637058912617, guid: 57f3a64cddfaf2f47a2c64d1b5cdf726, type: 3}
   missileCooldown: 2
   missileFireSound: {fileID: 8300000, guid: 52eb68ef8d275be4fb3dc866b981de3f, type: 3}
+  killsRequiredForMissile: 3
 --- !u!114 &7637291099654648510
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -621,7 +622,7 @@ MonoBehaviour:
   audioSource: {fileID: 0}
   dodgeSoundEffect: {fileID: 0}
   doubleTapWindow: 0.3
-  dodgeDistance: 10
+  dodgeDistance: 5
   dodgeDuration: 1
   dodgeCooldown: 2
   iFrameDuration: 1
