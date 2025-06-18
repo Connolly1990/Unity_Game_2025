@@ -28,7 +28,8 @@ public class ContinuousLaserSystem : MonoBehaviour
 
     void Update()
     {
-        if (playerMovement.CanShoot && playerMovement.IsMoving && Time.time >= nextFireTime)
+        // Check if player can shoot, spacebar is held, and fire rate cooldown is over
+        if (playerMovement.CanShoot && Input.GetKey(KeyCode.Space) && Time.time >= nextFireTime)
         {
             FireLaser();
             nextFireTime = Time.time + fireRate;
@@ -51,10 +52,16 @@ public class ContinuousLaserSystem : MonoBehaviour
 
         GameObject laser = Instantiate(laserPrefab, firePoint.position,
                                     Quaternion.LookRotation(laserDir, Vector3.up));
-        laser.GetComponent<LaserProjectile>().Initialize(
-            playerMovement.cylinderTransform,
-            laserDir
-        );
+
+        // Assuming your laser script has an Initialize method
+        var laserComponent = laser.GetComponent<LaserProjectile>(); 
+        if (laserComponent != null)
+        {
+            laserComponent.Initialize(
+                playerMovement.cylinderTransform,
+                laserDir
+            );
+        }
 
         // Play the laser shoot sound if available
         if (laserShootSound != null && audioSource != null)

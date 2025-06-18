@@ -16,5 +16,12 @@ public class EnemyScoreTracker : MonoBehaviour
         {
             ScoreManager.Instance.AddScore(pointsValue);
         }
+
+        // Notify the player that an enemy was killed
+        CylinderPlayerMovement player = Object.FindFirstObjectByType<CylinderPlayerMovement>();
+        if (player != null)
+        {
+            player.OnEnemyKilled();
+        }
     }
 }

@@ -17,10 +17,14 @@ public class CylinderPlayerMovement : MonoBehaviour
     public GameObject missilePrefab; // Drag your missile prefab here
     public float missileCooldown = 2f; // Time between missile shots
     public AudioClip missileFireSound; // Optional sound effect
+    [Tooltip("Number of kills required to earn a missile")]
+    public int killsRequiredForMissile = 3; // Kills needed to reload missile
 
     public bool CanShoot { get; private set; } = false;
     public bool IsMoving { get; private set; } = false;
     public int CurrentDirection { get; private set; } = 0; // 0=idle, 1=forward, -1=backward
+    public bool HasMissileReady { get; private set; } = false;
+    public int CurrentKillCount { get; private set; } = 0;
 
     private float currentAngle = 0f;
     private float cylinderRadius;
@@ -44,6 +48,8 @@ public class CylinderPlayerMovement : MonoBehaviour
                                  transform.position.z - cylinderTransform.position.z);
         UpdatePositionAndRotation(transform.position.y, true);
         CanShoot = false;
+        HasMissileReady = false;
+        CurrentKillCount = 0;
 
         // Get or add AudioSource component for missile sounds
         audioSource = GetComponent<AudioSource>();
@@ -122,10 +128,27 @@ public class CylinderPlayerMovement : MonoBehaviour
 
     void HandleMissileFiring()
     {
-        // Check if player can shoot and F key is pressed
-        if (CanShoot && Input.GetKeyDown(KeyCode.F) && Time.time >= nextFireTime)
+        // Check if player can shoot, has missile ready, F key is pressed, and cooldown is over
+        if (CanShoot && HasMissileReady && Input.GetKeyDown(KeyCode.F) && Time.time >= nextFireTime)
         {
             FireMissile();
+        }
+    }
+
+    // Public method to be called when an enemy is killed
+    public void OnEnemyKilled()
+    {
+        if (!HasMissileReady)
+        {
+            CurrentKillCount++;
+            Debug.Log($"Kill count: {CurrentKillCount}/{killsRequiredForMissile}");
+
+            if (CurrentKillCount >= killsRequiredForMissile)
+            {
+                HasMissileReady = true;
+                CurrentKillCount = 0; // Reset kill count
+                Debug.Log("Missile ready!");
+            }
         }
     }
 
@@ -144,6 +167,9 @@ public class CylinderPlayerMovement : MonoBehaviour
 
         // Set the cooldown for next shot
         nextFireTime = Time.time + missileCooldown;
+
+        // Use up the missile
+        HasMissileReady = false;
 
         // Get the forward direction considering player orientation on cylinder
         Vector3 toCenter = cylinderTransform.position - transform.position;
@@ -166,6 +192,8 @@ public class CylinderPlayerMovement : MonoBehaviour
         {
             audioSource.PlayOneShot(missileFireSound);
         }
+
+        Debug.Log("Missile fired! Need " + killsRequiredForMissile + " more kills for next missile.");
     }
 
     void UpdatePositionAndRotation(float newY, bool snap = false)
@@ -221,6 +249,13 @@ public class CylinderPlayerMovement : MonoBehaviour
         {
             Gizmos.color = Color.yellow;
             Gizmos.DrawWireSphere(missileSpawnPoint.position, 0.2f);
+        }
+
+        // Draw missile status indicator
+        if (HasMissileReady)
+        {
+            Gizmos.color = Color.green;
+            Gizmos.DrawWireCube(transform.position + Vector3.up * 2f, Vector3.one * 0.5f);
         }
     }
 }
