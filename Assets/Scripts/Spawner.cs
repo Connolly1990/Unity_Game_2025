@@ -56,6 +56,20 @@ public class Spawner : MonoBehaviour
     [Tooltip("Volume of boss spawn sound")]
     [Range(0f, 1f)] public float bossSpawnVolume = 0.8f;
 
+    [Header("HEALTH ICON SETTINGS")]
+    [Tooltip("Health icon prefab to spawn")]
+    public GameObject healthIconPrefab;
+    [Tooltip("Time between health icon spawns (seconds)")]
+    public float healthIconSpawnInterval = 30f;
+    [Tooltip("Maximum number of health icons allowed at once")]
+    public int maxHealthIcons = 3;
+    [Tooltip("Minimum height to spawn health icons")]
+    public float healthIconMinHeight = -10f;
+    [Tooltip("Maximum height to spawn health icons")]
+    public float healthIconMaxHeight = 10f;
+    [Tooltip("Enable debug logs for health icon spawns")]
+    public bool debugLogHealthIcons = true;
+
     [Header("SPAWN SETTINGS")]
     [Tooltip("Time between spawn attempts")]
     public float spawnCooldown = 2f;
@@ -76,6 +90,8 @@ public class Spawner : MonoBehaviour
     private float cylinderRadius;
     private float gameTimer = 0f;
     private AudioSource audioSource;
+    private List<GameObject> activeHealthIcons = new List<GameObject>();
+    private float lastHealthIconSpawnTime = 0f;
 
     void Start()
     {
@@ -88,6 +104,7 @@ public class Spawner : MonoBehaviour
         FindCylinder();
         ValidateEnemyTypes();
         ValidateBossTypes();
+        ValidateHealthIconSettings();
         CacheSpawnPoints();
         ClearEnemyInstanceTracking();
         SetupAudio();
@@ -105,11 +122,35 @@ public class Spawner : MonoBehaviour
 
             StartCoroutine(SpawnRoutine());
             StartCoroutine(BossSpawnRoutine());
+            StartCoroutine(HealthIconSpawnRoutine());
         }
         else
         {
             Debug.LogError("Spawner initialization failed - check errors above");
             enabled = false;
+        }
+    }
+
+    void ValidateHealthIconSettings()
+    {
+        if (healthIconPrefab == null)
+        {
+            Debug.LogWarning("Health icon prefab not assigned. Health icon spawning will be disabled.");
+            return;
+        }
+
+        // Validate height ranges
+        if (healthIconMinHeight >= healthIconMaxHeight)
+        {
+            Debug.LogWarning($"Health icon has invalid height range: min={healthIconMinHeight}, max={healthIconMaxHeight}. Fixing automatically.");
+            healthIconMaxHeight = healthIconMinHeight + 20f; // Auto-fix
+        }
+
+        // Ensure the prefab has the HealthIcon component or add it
+        HealthIconTracker tracker = healthIconPrefab.GetComponent<HealthIconTracker>();
+        if (tracker == null)
+        {
+            Debug.LogWarning("Health icon prefab doesn't have HealthIconTracker component. Make sure to add it to track destruction.");
         }
     }
 
@@ -141,6 +182,7 @@ public class Spawner : MonoBehaviour
         {
             enemyType.activeInstances.Clear();
         }
+        activeHealthIcons.Clear();
     }
 
     void FindPlayer()
@@ -318,6 +360,86 @@ public class Spawner : MonoBehaviour
                     Debug.Log($"{enemyToSpawn.prefab.name} count: {enemyToSpawn.activeInstances.Count}/{enemyToSpawn.maxCount}");
                 }
             }
+        }
+    }
+
+    IEnumerator HealthIconSpawnRoutine()
+    {
+        // Wait for initial delay before first health icon spawn
+        yield return new WaitForSeconds(healthIconSpawnInterval);
+
+        while (true)
+        {
+            // Check if we can spawn a health icon
+            if (healthIconPrefab != null && CanSpawnHealthIcon())
+            {
+                SpawnHealthIcon();
+            }
+
+            // Wait for the next spawn interval
+            yield return new WaitForSeconds(healthIconSpawnInterval);
+        }
+    }
+
+    bool CanSpawnHealthIcon()
+    {
+        // Clean up destroyed health icons first
+        CleanupDestroyedHealthIcons();
+
+        // Check if we're under the limit
+        return activeHealthIcons.Count < maxHealthIcons;
+    }
+
+    void SpawnHealthIcon()
+    {
+        // Get a random spawn point
+        Transform spawnPoint = GetRandomSpawnPoint();
+        if (spawnPoint == null) return;
+
+        // Clamp spawn height to health icon range
+        float spawnY = Mathf.Clamp(spawnPoint.position.y, healthIconMinHeight, healthIconMaxHeight);
+        Vector3 spawnPosition = spawnPoint.position;
+        spawnPosition.y = spawnY;
+
+        // Project onto cylinder surface
+        Vector3 spawnPos = ProjectOnCylinder(spawnPosition);
+
+        // Spawn the health icon with no rotation (or slight random rotation for variety)
+        Quaternion spawnRotation = Quaternion.Euler(0, Random.Range(0, 360), 0);
+        GameObject spawnedHealthIcon = Instantiate(healthIconPrefab, spawnPos, spawnRotation);
+
+        // Add to tracking list
+        activeHealthIcons.Add(spawnedHealthIcon);
+
+        // Add tracker component if it doesn't exist
+        HealthIconTracker tracker = spawnedHealthIcon.GetComponent<HealthIconTracker>();
+        if (tracker == null)
+        {
+            tracker = spawnedHealthIcon.AddComponent<HealthIconTracker>();
+        }
+        tracker.Initialize(this);
+
+        // Update last spawn time
+        lastHealthIconSpawnTime = gameTimer;
+
+        if (debugLogHealthIcons)
+        {
+            Debug.Log($"Health icon spawned at height {spawnPos.y}. Active count: {activeHealthIcons.Count}/{maxHealthIcons}");
+        }
+    }
+
+    Transform GetRandomSpawnPoint()
+    {
+        if (allSpawnPoints.Count == 0) return null;
+        return allSpawnPoints[Random.Range(0, allSpawnPoints.Count)];
+    }
+
+    void CleanupDestroyedHealthIcons()
+    {
+        int removed = activeHealthIcons.RemoveAll(h => h == null);
+        if (removed > 0 && debugLogHealthIcons)
+        {
+            Debug.Log($"Cleaned up {removed} destroyed health icons");
         }
     }
 
@@ -571,6 +693,19 @@ public class Spawner : MonoBehaviour
                 Gizmos.DrawWireSphere(childPos, 0.2f);
             }
         }
+
+        // Draw health icon gizmos in blue
+        if (healthIconPrefab != null)
+        {
+            Gizmos.color = Color.blue;
+            foreach (GameObject healthIcon in activeHealthIcons)
+            {
+                if (healthIcon != null)
+                {
+                    Gizmos.DrawWireCube(healthIcon.transform.position, Vector3.one * 0.5f);
+                }
+            }
+        }
     }
 
     // Method to be called by the EnemyTracker component when an enemy is destroyed
@@ -587,6 +722,20 @@ public class Spawner : MonoBehaviour
         }
     }
 
+    // Method to be called by the HealthIconTracker component when a health icon is destroyed
+    public void OnHealthIconDestroyed(GameObject healthIcon)
+    {
+        if (activeHealthIcons.Contains(healthIcon))
+        {
+            activeHealthIcons.Remove(healthIcon);
+
+            if (debugLogHealthIcons)
+            {
+                Debug.Log($"Health icon destroyed. Count: {activeHealthIcons.Count}/{maxHealthIcons}");
+            }
+        }
+    }
+
     // Helper methods for UI/Debug
     public string GetFormattedGameTime()
     {
@@ -598,6 +747,12 @@ public class Spawner : MonoBehaviour
     public float GetGameTime()
     {
         return gameTimer;
+    }
+
+    public int GetActiveHealthIconCount()
+    {
+        CleanupDestroyedHealthIcons();
+        return activeHealthIcons.Count;
     }
 }
 
@@ -618,6 +773,25 @@ public class EnemyTracker : MonoBehaviour
         if (spawner != null)
         {
             spawner.OnEnemyDestroyed(gameObject, enemyType);
+        }
+    }
+}
+
+// Helper component to track when health icons are destroyed
+public class HealthIconTracker : MonoBehaviour
+{
+    private Spawner spawner;
+
+    public void Initialize(Spawner spawnerRef)
+    {
+        spawner = spawnerRef;
+    }
+
+    void OnDestroy()
+    {
+        if (spawner != null)
+        {
+            spawner.OnHealthIconDestroyed(gameObject);
         }
     }
 }
