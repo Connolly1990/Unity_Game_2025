@@ -12242,11 +12242,11 @@ MonoBehaviour:
   healthIconMaxHeight: 10
   debugLogHealthIcons: 1
   powerUpTypes:
-  - prefab: {fileID: 0}
-    powerUpName: 
-    spawnWeight: 0
-    spawnInterval: 0
-    maxCount: 0
+  - prefab: {fileID: 7635892181721114799, guid: c0e1b5f53b9448847950ae62fb05f18d, type: 3}
+    powerUpName: Shield
+    spawnWeight: 3
+    spawnInterval: 30
+    maxCount: 1
     minSpawnHeight: 0
     maxSpawnHeight: 0
     spawnSFX: {fileID: 0}
@@ -49635,6 +49635,16 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &1601250629 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6462048946443810857, guid: d83ef235421008c4dbc81e1ca1e8c582, type: 3}
+  m_PrefabInstance: {fileID: 1733694309}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &1601250633 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6387041125780647897, guid: d83ef235421008c4dbc81e1ca1e8c582, type: 3}
+  m_PrefabInstance: {fileID: 1733694309}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1605251146 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -7146521406498821007, guid: ec1024bd4ca8e744aa144d32ea04ce6d, type: 3}
@@ -51383,6 +51393,63 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!1001 &1733694309
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 476748242}
+    m_Modifications:
+    - target: {fileID: 6387041125780647897, guid: d83ef235421008c4dbc81e1ca1e8c582, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6387041125780647897, guid: d83ef235421008c4dbc81e1ca1e8c582, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6387041125780647897, guid: d83ef235421008c4dbc81e1ca1e8c582, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6387041125780647897, guid: d83ef235421008c4dbc81e1ca1e8c582, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6387041125780647897, guid: d83ef235421008c4dbc81e1ca1e8c582, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6387041125780647897, guid: d83ef235421008c4dbc81e1ca1e8c582, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6387041125780647897, guid: d83ef235421008c4dbc81e1ca1e8c582, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6387041125780647897, guid: d83ef235421008c4dbc81e1ca1e8c582, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6387041125780647897, guid: d83ef235421008c4dbc81e1ca1e8c582, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6387041125780647897, guid: d83ef235421008c4dbc81e1ca1e8c582, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6462048946443810857, guid: d83ef235421008c4dbc81e1ca1e8c582, type: 3}
+      propertyPath: m_Name
+      value: Shield
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: d83ef235421008c4dbc81e1ca1e8c582, type: 3}
 --- !u!1001 &1740534838
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -60868,6 +60935,10 @@ PrefabInstance:
       propertyPath: dodgeParticleEffect
       value: 
       objectReference: {fileID: 0}
+    - target: {fileID: 5063319308242596705, guid: f010a16e0742e2e49b9e44ac436cd1c0, type: 3}
+      propertyPath: shieldVisual
+      value: 
+      objectReference: {fileID: 1601250629}
     - target: {fileID: 7398101863961760288, guid: f010a16e0742e2e49b9e44ac436cd1c0, type: 3}
       propertyPath: m_Name
       value: Jet
@@ -60914,7 +60985,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 7917476434420484250, guid: f010a16e0742e2e49b9e44ac436cd1c0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1601250633}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: f010a16e0742e2e49b9e44ac436cd1c0, type: 3}
 --- !u!222 &1377637810359595010

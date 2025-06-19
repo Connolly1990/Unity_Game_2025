@@ -47,7 +47,7 @@ GameObject:
   - component: {fileID: 6781637225283756067}
   - component: {fileID: 8910709166383893434}
   m_Layer: 0
-  m_Name: Resized
+  m_Name: Resized-Health
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

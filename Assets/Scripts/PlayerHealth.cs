@@ -26,6 +26,10 @@ public class PlayerHealth : MonoBehaviour
     [Header("Damage Sources")]
     [SerializeField] private string[] damageTags;
 
+    [Header("Shield System")]
+    [SerializeField] private GameObject shieldVisual; // 🔹 Assign your blue transparent sphere here
+    private int shieldHitsRemaining = 0;
+
     private Renderer playerRenderer;
     private Color originalColor;
 
@@ -49,6 +53,11 @@ public class PlayerHealth : MonoBehaviour
         if (findHeartsByTag)
         {
             FindHeartImagesByTag();
+        }
+
+        if (shieldVisual != null)
+        {
+            shieldVisual.SetActive(false); // Ensure it's off on start
         }
     }
 
@@ -87,6 +96,18 @@ public class PlayerHealth : MonoBehaviour
     public void TakeDamage(int damage)
     {
         if (isInvincible || currentHealth <= 0) return;
+
+        // 🔹 Shield logic
+        if (shieldHitsRemaining > 0)
+        {
+            shieldHitsRemaining--;
+            Debug.Log("Shield absorbed the damage! Remaining shield hits: " + shieldHitsRemaining);
+            if (shieldHitsRemaining == 0 && shieldVisual != null)
+            {
+                shieldVisual.SetActive(false); // Turn off shield visual
+            }
+            return; // Damage absorbed
+        }
 
         currentHealth -= damage;
         currentHealth = Mathf.Max(0, currentHealth);
@@ -172,7 +193,15 @@ public class PlayerHealth : MonoBehaviour
         UpdateHealthDisplay();
     }
 
-    // ✅ Safe Public Getters (for health pickups, UI, etc.)
+    public void ActivateShield(int hits)
+    {
+        shieldHitsRemaining = hits;
+        if (shieldVisual != null)
+        {
+            shieldVisual.SetActive(true);
+        }
+    }
+
     public int CurrentHealth
     {
         get { return currentHealth; }
