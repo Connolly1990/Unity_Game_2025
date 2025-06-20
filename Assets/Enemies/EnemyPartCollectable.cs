@@ -14,12 +14,22 @@ public class EnemyPartCollectible : MonoBehaviour
     [Header("Visual Effects")]
     [Tooltip("Rotation speed (degrees per second)")]
     public float rotationSpeed = 90f;
-
     [Tooltip("Blink frequency (blinks per second)")]
     public float blinkFrequency = 2f;
-
     [Tooltip("Axis to rotate around (normalized)")]
     public Vector3 rotationAxis = Vector3.up;
+
+    [Header("Audio Settings")]
+    [Tooltip("Sound to play when collected")]
+    public AudioClip collectSound;
+    [Tooltip("Volume for collection sound")]
+    public float soundVolume = 1f;
+
+    [Header("Collection Effects")]
+    [Tooltip("Particle effect to spawn on collection")]
+    public GameObject collectionEffect;
+    [Tooltip("Duration to wait before destroying after collection (for effects)")]
+    public float destroyDelay = 0.1f;
 
     private Renderer objectRenderer;
     private Collider objectCollider;
@@ -79,7 +89,6 @@ public class EnemyPartCollectible : MonoBehaviour
             {
                 isVisible = false;
             }
-
             objectRenderer.enabled = isVisible;
         }
     }
@@ -104,11 +113,38 @@ public class EnemyPartCollectible : MonoBehaviour
             ScoreManager.Instance.AddScore(scoreValue);
         }
 
-        // Optional: Play collection sound or effect here
-        // AudioSource.PlayClipAtPoint(collectSound, transform.position);
+        // Notify clone quest if active
+        if (ClonePowerup.activeCloneQuest != null)
+        {
+            ClonePowerup.activeCloneQuest.OnPartCollected();
+        }
 
-        // Destroy the collectible
-        Destroy(gameObject);
+        // Play collection sound
+        if (collectSound != null)
+        {
+            AudioSource.PlayClipAtPoint(collectSound, transform.position, soundVolume);
+        }
+
+        // Spawn collection effect
+        if (collectionEffect != null)
+        {
+            GameObject effect = Instantiate(collectionEffect, transform.position, transform.rotation);
+            // Auto-destroy effect after 2 seconds if it doesn't destroy itself
+            Destroy(effect, 2f);
+        }
+
+        // Hide visual components immediately
+        if (objectRenderer != null)
+        {
+            objectRenderer.enabled = false;
+        }
+        if (objectCollider != null)
+        {
+            objectCollider.enabled = false;
+        }
+
+        // Destroy the collectible after a short delay (for sound/effects to play)
+        Destroy(gameObject, destroyDelay);
     }
 
     private IEnumerator DespawnAfterTime()
