@@ -13,6 +13,8 @@ TagManager:
   - PlayerLaser
   - EnemyLaser
   - Heart
+  - FirePoint
+  - Objective1
   layers:
   - Default
   - TransparentFX

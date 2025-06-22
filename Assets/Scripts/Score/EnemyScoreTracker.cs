@@ -9,11 +9,9 @@ public class EnemyScoreTracker : MonoBehaviour
     [Header("Drop Settings")]
     [Tooltip("Enemy part prefab to drop when destroyed")]
     public GameObject enemyPartPrefab;
-
     [Tooltip("Drop chance (1 = always drop, 5 = 1 in 5 chance, etc.)")]
     [Range(1, 20)]
     public int dropRate = 5;
-
     [Tooltip("Force spawn offset from enemy position (to avoid overlap)")]
     public Vector3 dropOffset = Vector3.up * 0.5f;
 
@@ -48,7 +46,6 @@ public class EnemyScoreTracker : MonoBehaviour
 
         // Roll for drop chance (1 in dropRate chance)
         int roll = Random.Range(1, dropRate + 1);
-
         if (roll == 1) // Success! Drop the part
         {
             SpawnEnemyPart();
