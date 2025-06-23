@@ -45605,17 +45605,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Resized-Speed
       objectReference: {fileID: 0}
-    - target: {fileID: 6737378550880061486, guid: 1b949d376f66803438a829e1e4453658, type: 3}
-      propertyPath: m_Enabled
-      value: 1
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 4196916148780793854, guid: 1b949d376f66803438a829e1e4453658, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1972649639}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 1b949d376f66803438a829e1e4453658, type: 3}
 --- !u!1 &1291088159 stripped
 GameObject:
@@ -57987,31 +57980,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.022033794, y: 0.022033788, z: 0.018230967}
   m_Center: {x: 0.000000029802322, y: 0.000000011175871, z: -0.000884523}
---- !u!1 &1972649632 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 4196916148780793854, guid: 1b949d376f66803438a829e1e4453658, type: 3}
-  m_PrefabInstance: {fileID: 1286498095}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &1972649639
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1972649632}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 856ccf7f7abe0a842813baf65bea645d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  speedMultiplier: 2
-  boostDuration: 30
-  questStartSound: {fileID: 0}
-  ringCollectSound: {fileID: 0}
-  questCompleteSound: {fileID: 0}
-  boostActivateSound: {fileID: 0}
-  boostEndSound: {fileID: 0}
-  soundVolume: 1
 --- !u!4 &1982898677 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 8d2237ed15e82eb4397a840efc159dd0, type: 3}

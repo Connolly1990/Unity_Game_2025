@@ -18,6 +18,7 @@ TagManager:
   - Objective2
   - Objective3
   - Rings
+  - Glow
   layers:
   - Default
   - TransparentFX
