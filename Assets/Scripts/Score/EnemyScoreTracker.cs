@@ -30,11 +30,29 @@ public class EnemyScoreTracker : MonoBehaviour
         // Check if we should drop an enemy part
         TryDropEnemyPart();
 
+        // Notify powerup quests about enemy death
+        NotifyPowerupQuests();
+
         // Notify the player that an enemy was killed
         CylinderPlayerMovement player = Object.FindFirstObjectByType<CylinderPlayerMovement>();
         if (player != null)
         {
             player.OnEnemyKilled();
+        }
+    }
+
+    private void NotifyPowerupQuests()
+    {
+        // Notify the fire rate quest about the kill (only if quest is started)
+        if (FireRatePowerup.activeFireRateQuest != null && FireRatePowerup.activeFireRateQuest.IsQuestStarted())
+        {
+            FireRatePowerup.activeFireRateQuest.OnEnemyKilled();
+        }
+
+        // Notify the nuke quest about parts collected (only if quest is started)
+        if (LaserNukePowerup.activeNukeQuest != null && LaserNukePowerup.activeNukeQuest.IsQuestStarted())
+        {
+            LaserNukePowerup.activeNukeQuest.OnPartCollected();
         }
     }
 

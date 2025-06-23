@@ -36,11 +36,8 @@ public class LaserNukePowerup : MonoBehaviour
         isComplete = false;
         questStarted = false;
 
-        // Initially hide the UI until quest starts
-        if (progressUI != null)
-        {
-            progressUI.SetActive(false);
-        }
+        // UI is already set to inactive in FindRequiredComponents()
+        Debug.Log("Laser Nuke Powerup ready to be picked up!");
     }
 
     private void FindRequiredComponents()
@@ -78,6 +75,9 @@ public class LaserNukePowerup : MonoBehaviour
             {
                 Debug.LogError("LaserNukePowerup: No TextMeshProUGUI component found on 'Objective1' GameObject or its children!");
             }
+
+            // Ensure UI is initially hidden and ready for this new quest
+            progressUI.SetActive(false);
         }
         else
         {
@@ -105,10 +105,8 @@ public class LaserNukePowerup : MonoBehaviour
 
     public void OnPartCollected()
     {
-        if (isComplete) return;
-
-        // Only count parts if the quest is active (this object exists)
-        if (activeNukeQuest == null) return;
+        // Only count parts if quest has been started by picking up the powerup
+        if (!questStarted || isComplete) return;
 
         currentParts++;
         UpdateUI();
@@ -117,6 +115,11 @@ public class LaserNukePowerup : MonoBehaviour
         {
             CompleteNukeQuest();
         }
+    }
+
+    public bool IsQuestStarted()
+    {
+        return questStarted;
     }
 
     private void CompleteNukeQuest()
@@ -153,6 +156,7 @@ public class LaserNukePowerup : MonoBehaviour
         }
 
         // Clear the static reference and destroy this quest object
+        // This ensures a new powerup must be picked up to start another quest
         activeNukeQuest = null;
         Destroy(gameObject);
     }
