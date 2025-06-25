@@ -7,7 +7,7 @@ public class SpeedPowerup : MonoBehaviour
     public static SpeedPowerup activeSpeedQuest;
 
     [Header("Speed Quest Settings")]
-    private GameObject ringContainer; // Now found by tag
+    private GameObject ringContainer; // Found by tag "Rings"
     private List<GameObject> rings = new List<GameObject>();
     private int totalRings = 0;
     private int ringsCollected = 0;
@@ -36,9 +36,28 @@ public class SpeedPowerup : MonoBehaviour
     public AudioClip boostEndSound;
     public float soundVolume = 1f;
 
+    [Header("Visual Effects")]
+    public GameObject pickupEffect; // Optional particle effect when picked up
+
+    // Components to hide when picked up (merged from SpeedBoostPickup)
+    private Renderer[] allRenderers;
+    private Collider[] allColliders;
+    private Light[] allLights;
+    private ParticleSystem[] allParticles;
+
+    // Store original states for restoration
+    private bool[] originalRendererStates;
+    private bool[] originalColliderStates;
+    private bool[] originalLightStates;
+    private bool[] originalParticleStates;
+    private GameObject[] originalChildStates;
+    private bool[] childActiveStates;
+
     private void Start()
     {
         FindRequiredComponents();
+        CacheComponents();
+        StoreOriginalStates();
         SetupRings();
 
         activeSpeedQuest = this;
@@ -84,6 +103,55 @@ public class SpeedPowerup : MonoBehaviour
         }
     }
 
+    private void CacheComponents()
+    {
+        // Cache all renderers, colliders, lights, and particle systems in this object and its children
+        allRenderers = GetComponentsInChildren<Renderer>();
+        allColliders = GetComponentsInChildren<Collider>();
+        allLights = GetComponentsInChildren<Light>();
+        allParticles = GetComponentsInChildren<ParticleSystem>();
+
+        // Cache all child GameObjects
+        originalChildStates = new GameObject[transform.childCount];
+        childActiveStates = new bool[transform.childCount];
+
+        for (int i = 0; i < transform.childCount; i++)
+        {
+            originalChildStates[i] = transform.GetChild(i).gameObject;
+            childActiveStates[i] = originalChildStates[i].activeSelf;
+        }
+
+        Debug.Log($"Cached components - Renderers: {allRenderers.Length}, Colliders: {allColliders.Length}, Lights: {allLights.Length}, Particles: {allParticles.Length}, Children: {originalChildStates.Length}");
+    }
+
+    private void StoreOriginalStates()
+    {
+        // Store original enabled states
+        originalRendererStates = new bool[allRenderers.Length];
+        for (int i = 0; i < allRenderers.Length; i++)
+        {
+            originalRendererStates[i] = allRenderers[i].enabled;
+        }
+
+        originalColliderStates = new bool[allColliders.Length];
+        for (int i = 0; i < allColliders.Length; i++)
+        {
+            originalColliderStates[i] = allColliders[i].enabled;
+        }
+
+        originalLightStates = new bool[allLights.Length];
+        for (int i = 0; i < allLights.Length; i++)
+        {
+            originalLightStates[i] = allLights[i].enabled;
+        }
+
+        originalParticleStates = new bool[allParticles.Length];
+        for (int i = 0; i < allParticles.Length; i++)
+        {
+            originalParticleStates[i] = allParticles[i].isPlaying;
+        }
+    }
+
     private void SetupRings()
     {
         if (ringContainer == null)
@@ -120,16 +188,134 @@ public class SpeedPowerup : MonoBehaviour
         {
             EndSpeedBoost();
         }
+
+        // Update UI timer during boost
+        if (boostActive && progressText != null)
+        {
+            float timeRemaining = boostEndTime - Time.time;
+            progressText.text = $"SPEED BOOST: {timeRemaining:F1}s";
+        }
     }
 
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player"))
         {
-            StartSpeedQuest();
-            GetComponent<Renderer>().enabled = false;
-            GetComponent<Collider>().enabled = false;
+            PickupSpeedPowerup();
         }
+    }
+
+    private void PickupSpeedPowerup()
+    {
+        // Play pickup sound
+        if (questStartSound != null)
+        {
+            AudioSource.PlayClipAtPoint(questStartSound, transform.position, soundVolume);
+        }
+
+        // Spawn pickup effect
+        if (pickupEffect != null)
+        {
+            Instantiate(pickupEffect, transform.position, transform.rotation);
+        }
+
+        Debug.Log("Speed Powerup picked up! Starting ring collection quest...");
+
+        // Hide ALL visuals using comprehensive method
+        HideAllVisuals();
+
+        StartSpeedQuest();
+    }
+
+    private void HideAllVisuals()
+    {
+        Debug.Log("=== HIDING ALL VISUALS (ENHANCED) ===");
+        Debug.Log($"This GameObject name: {this.name}");
+
+        // METHOD 1: Disable all child GameObjects (this should hide everything)
+        Debug.Log("Method 1: Disabling all child GameObjects");
+        for (int i = 0; i < transform.childCount; i++)
+        {
+            Transform child = transform.GetChild(i);
+            Debug.Log($"Deactivating child: {child.name} (was active: {child.gameObject.activeSelf})");
+            child.gameObject.SetActive(false);
+        }
+
+        // METHOD 2: Disable all renderers
+        Debug.Log($"Method 2: Disabling {allRenderers.Length} renderers");
+        foreach (Renderer renderer in allRenderers)
+        {
+            if (renderer != null)
+            {
+                renderer.enabled = false;
+            }
+        }
+
+        // METHOD 3: Disable all colliders except the trigger for cleanup
+        Debug.Log($"Method 3: Disabling {allColliders.Length} colliders");
+        foreach (Collider collider in allColliders)
+        {
+            if (collider != null && collider != GetComponent<Collider>())
+            {
+                collider.enabled = false;
+            }
+        }
+
+        // METHOD 4: Disable all lights
+        Debug.Log($"Method 4: Disabling {allLights.Length} lights");
+        foreach (Light light in allLights)
+        {
+            if (light != null)
+            {
+                light.enabled = false;
+            }
+        }
+
+        // METHOD 5: Stop all particle systems
+        Debug.Log($"Method 5: Stopping {allParticles.Length} particle systems");
+        foreach (ParticleSystem particle in allParticles)
+        {
+            if (particle != null)
+            {
+                particle.Stop();
+                var emission = particle.emission;
+                emission.enabled = false;
+            }
+        }
+
+        // METHOD 6: Additional particle system search by tag and name
+        Debug.Log("Method 6: Additional particle system cleanup");
+
+        // Find by "Glow" tag
+        GameObject[] glowObjects = GameObject.FindGameObjectsWithTag("Glow");
+        foreach (GameObject glow in glowObjects)
+        {
+            if (glow.transform.IsChildOf(this.transform))
+            {
+                Debug.Log($"Found glow object: {glow.name} - deactivating");
+                glow.SetActive(false);
+            }
+        }
+
+        // Find any object with "glow" in the name (case insensitive)
+        foreach (Transform child in GetComponentsInChildren<Transform>(true))
+        {
+            if (child.name.ToLower().Contains("glow") || child.name.ToLower().Contains("particle"))
+            {
+                Debug.Log($"Found glow/particle object by name: {child.name} - deactivating");
+                child.gameObject.SetActive(false);
+            }
+        }
+
+        // METHOD 7: Final brute force - disable this entire GameObject's renderer if it has one
+        Renderer thisRenderer = GetComponent<Renderer>();
+        if (thisRenderer != null)
+        {
+            Debug.Log("Disabling main GameObject renderer");
+            thisRenderer.enabled = false;
+        }
+
+        Debug.Log("=== ALL VISUALS HIDDEN (ENHANCED) ===");
     }
 
     private void StartSpeedQuest()
@@ -148,11 +334,6 @@ public class SpeedPowerup : MonoBehaviour
             {
                 ringCollider.enabled = true;
             }
-        }
-
-        if (questStartSound != null)
-        {
-            AudioSource.PlayClipAtPoint(questStartSound, transform.position, soundVolume);
         }
 
         Debug.Log($"Speed challenge started! Fly through all {totalRings} rings to activate x2 speed for 30 seconds.");
@@ -323,6 +504,35 @@ public class SpeedPowerup : MonoBehaviour
         {
             activeSpeedQuest = null;
         }
+    }
+
+    // Debug method to verify what's still visible
+    [ContextMenu("Debug Visible Components")]
+    public void DebugVisibleComponents()
+    {
+        Debug.Log("=== DEBUGGING VISIBLE COMPONENTS ===");
+
+        foreach (Transform child in GetComponentsInChildren<Transform>(true))
+        {
+            if (child != this.transform)
+            {
+                Debug.Log($"Child: {child.name}, Active: {child.gameObject.activeSelf}, Parent: {child.parent.name}");
+
+                ParticleSystem ps = child.GetComponent<ParticleSystem>();
+                if (ps != null)
+                {
+                    Debug.Log($"  - Has ParticleSystem: Playing={ps.isPlaying}, EmissionEnabled={ps.emission.enabled}");
+                }
+
+                Renderer r = child.GetComponent<Renderer>();
+                if (r != null)
+                {
+                    Debug.Log($"  - Has Renderer: Enabled={r.enabled}");
+                }
+            }
+        }
+
+        Debug.Log("=== END DEBUG ===");
     }
 }
 
