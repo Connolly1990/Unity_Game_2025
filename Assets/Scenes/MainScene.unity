@@ -62025,6 +62025,18 @@ PrefabInstance:
       value: Flying_Robot_One
       objectReference: {fileID: 0}
     - target: {fileID: 2233679923304195437, guid: 017f79fc7294b2541ad3454324dafdb0, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.26547706
+      objectReference: {fileID: 0}
+    - target: {fileID: 2233679923304195437, guid: 017f79fc7294b2541ad3454324dafdb0, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.35680118
+      objectReference: {fileID: 0}
+    - target: {fileID: 2233679923304195437, guid: 017f79fc7294b2541ad3454324dafdb0, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.26547706
+      objectReference: {fileID: 0}
+    - target: {fileID: 2233679923304195437, guid: 017f79fc7294b2541ad3454324dafdb0, type: 3}
       propertyPath: m_LocalPosition.x
       value: -7.7639503
       objectReference: {fileID: 0}
@@ -62063,6 +62075,10 @@ PrefabInstance:
     - target: {fileID: 2233679923304195437, guid: 017f79fc7294b2541ad3454324dafdb0, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 69.878
+      objectReference: {fileID: 0}
+    - target: {fileID: 2242850532188042182, guid: 017f79fc7294b2541ad3454324dafdb0, type: 3}
+      propertyPath: m_IsTrigger
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -62348,6 +62364,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 3761821694472294335, guid: 93bba2ed1e97e2145bc0bb6411f8bcd5, type: 3}
+      propertyPath: m_IsTrigger
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5047070668586139980, guid: 93bba2ed1e97e2145bc0bb6411f8bcd5, type: 3}
       propertyPath: m_Name
       value: HKT

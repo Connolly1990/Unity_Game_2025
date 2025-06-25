@@ -181,8 +181,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pointsValue: 100
-  enemyPartPrefab: {fileID: 6581081594427669252, guid: 7ff6811a4ec6e11419459b2a789d768f, type: 3}
-  dropRate: 3
+  enemyPartPrefab: {fileID: 0}
+  dropRate: 1
   dropOffset: {x: 0, y: 0.5, z: 0}
 --- !u!4 &818863961322260032 stripped
 Transform:
