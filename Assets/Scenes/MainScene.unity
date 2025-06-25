@@ -11982,64 +11982,47 @@ MonoBehaviour:
   maxHealthIcons: 3
   healthIconMinHeight: -10
   healthIconMaxHeight: 10
-  debugLogHealthIcons: 1
   powerUpTypes:
   - prefab: {fileID: 7635892181721114799, guid: c0e1b5f53b9448847950ae62fb05f18d, type: 3}
     powerUpName: Shield
     spawnWeight: 3
-    spawnInterval: 30
-    maxCount: 1
     minSpawnHeight: 0
     maxSpawnHeight: 0
     spawnSFX: {fileID: 0}
     collectSFX: {fileID: 0}
     spawnVolume: 0.6
     activeInstances: []
-    lastSpawnTime: 0
   - prefab: {fileID: 7999969800494371920, guid: 92aec168febb01e4bbd551e9f445f5e1, type: 3}
     powerUpName: LaserNuke
     spawnWeight: 3
-    spawnInterval: 30
-    maxCount: 1
     minSpawnHeight: 0
     maxSpawnHeight: 0
     spawnSFX: {fileID: 0}
     collectSFX: {fileID: 0}
     spawnVolume: 0.6
     activeInstances: []
-    lastSpawnTime: 0
   - prefab: {fileID: 3365648163518839757, guid: 1b949d376f66803438a829e1e4453658, type: 3}
     powerUpName: x2 Speed
     spawnWeight: 3
-    spawnInterval: 30
-    maxCount: 1
     minSpawnHeight: 0
     maxSpawnHeight: 0
     spawnSFX: {fileID: 0}
     collectSFX: {fileID: 0}
     spawnVolume: 0.6
     activeInstances: []
-    lastSpawnTime: 0
   - prefab: {fileID: 4722356893160468189, guid: 2c42baa42ac65dd4c933cab1309df127, type: 3}
     powerUpName: x2 Fire Rate
     spawnWeight: 3
-    spawnInterval: 30
-    maxCount: 1
     minSpawnHeight: 0
     maxSpawnHeight: 0
     spawnSFX: {fileID: 0}
     collectSFX: {fileID: 0}
     spawnVolume: 0.6
     activeInstances: []
-    lastSpawnTime: 0
-  powerUpSpawnRateMultiplier: 1
-  debugLogPowerUps: 1
+  powerUpSpawnInterval: 30
+  powerUpCollisionRadius: 2
   spawnCooldown: 3
   playerTag: Player
-  debugDrawGizmos: 1
-  debugLogSpawnHeights: 0
-  debugLogEnemyCounts: 1
-  debugLogBossSpawns: 1
 --- !u!4 &311430737
 Transform:
   m_ObjectHideFlags: 0
