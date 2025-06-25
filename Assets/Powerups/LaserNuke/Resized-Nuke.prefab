@@ -4946,6 +4946,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 17107f83d0fd7e24580425403496d411, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7309569628545396859}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 17107f83d0fd7e24580425403496d411, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7998038612151709839}
   m_SourcePrefab: {fileID: 100100000, guid: 17107f83d0fd7e24580425403496d411, type: 3}
 --- !u!4 &7227796405436387050 stripped
 Transform:
@@ -4991,3 +4994,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   rotationSpeed: {x: 0, y: 50, z: 0}
+--- !u!114 &7998038612151709839
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7999969800494371920}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22dca6cb626574d4e881c843e89934f1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  partsNeeded: 5
+  laserNukePrefab: {fileID: 2597666852404115660, guid: f0dfedb76e53d814f9c8bc68c6027465, type: 3}
+  fullChargeSound: {fileID: 0}
+  nukeLaunchSound: {fileID: 0}
+  soundVolume: 1
