@@ -336,6 +336,7 @@ public class DodgeController : MonoBehaviour
     public bool IsDodging => isDodging;
     public bool CanDodge => canDodge;
     public float IFrameTimeRemaining => isInvincible ? iFrameDuration - (Time.time - (Time.time - iFrameDuration)) : 0f;
+    public float DodgeCooldown => dodgeCooldown;
 
     void UpdatePlayerMovementAngle()
     {
