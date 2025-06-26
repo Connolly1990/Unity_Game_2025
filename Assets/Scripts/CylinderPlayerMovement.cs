@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 [RequireComponent(typeof(Rigidbody))]
 public class CylinderPlayerMovement : MonoBehaviour
@@ -19,6 +20,10 @@ public class CylinderPlayerMovement : MonoBehaviour
     public AudioClip missileFireSound; // Optional sound effect
     [Tooltip("Number of kills required to earn a missile")]
     public int killsRequiredForMissile = 3; // Kills needed to reload missile
+
+    [Header("Missile UI")]
+    public Slider missileSlider; // Slider to show missile charge progress
+    public Image fKeyIcon; // The F key image that appears when ready
 
     public bool CanShoot { get; private set; } = false;
     public bool IsMoving { get; private set; } = false;
@@ -64,12 +69,16 @@ public class CylinderPlayerMovement : MonoBehaviour
             Debug.LogWarning("Missile spawn point not assigned. Using player position instead.");
             missileSpawnPoint = transform;
         }
+
+        // Initialize UI
+        InitializeMissileUI();
     }
 
     void Update()
     {
         HandleInput();
         HandleMissileFiring();
+        UpdateMissileUI();
     }
 
     void FixedUpdate()
@@ -107,6 +116,69 @@ public class CylinderPlayerMovement : MonoBehaviour
 
         UpdatePositionAndRotation(newY);
         UpdateShipOrientation();
+    }
+
+    void InitializeMissileUI()
+    {
+        // Set initial UI states
+        if (missileSlider != null)
+        {
+            missileSlider.minValue = 0f;
+            missileSlider.maxValue = killsRequiredForMissile;
+            missileSlider.value = 0f;
+            missileSlider.interactable = false; // Make it non-interactive (display only)
+        }
+
+        if (fKeyIcon != null)
+        {
+            fKeyIcon.gameObject.SetActive(false);
+        }
+    }
+
+    void UpdateMissileUI()
+    {
+        // Update missile slider
+        if (missileSlider != null)
+        {
+            missileSlider.value = CurrentKillCount;
+
+            // Optional: Change slider fill color based on progress
+            Image fillImage = missileSlider.fillRect.GetComponent<Image>();
+            if (fillImage != null)
+            {
+                if (HasMissileReady)
+                {
+                    fillImage.color = Color.green; // Ready - green
+                }
+                else
+                {
+                    float progress = (float)CurrentKillCount / killsRequiredForMissile;
+                    if (progress > 0.66f)
+                    {
+                        fillImage.color = Color.yellow; // Getting close - yellow
+                    }
+                    else
+                    {
+                        fillImage.color = Color.cyan; // Default - cyan
+                    }
+                }
+            }
+        }
+
+        // Update F key visibility
+        if (fKeyIcon != null)
+        {
+            fKeyIcon.gameObject.SetActive(HasMissileReady && CanShoot);
+
+            // Optional: Add pulsing effect when ready
+            if (HasMissileReady && CanShoot)
+            {
+                float pulse = (Mathf.Sin(Time.time * 3f) + 1f) * 0.5f; // Pulse between 0 and 1
+                Color fKeyColor = fKeyIcon.color;
+                fKeyColor.a = 0.7f + (pulse * 0.3f); // Pulse alpha between 0.7 and 1.0
+                fKeyIcon.color = fKeyColor;
+            }
+        }
     }
 
     void HandleInput()
@@ -257,5 +329,11 @@ public class CylinderPlayerMovement : MonoBehaviour
             Gizmos.color = Color.green;
             Gizmos.DrawWireCube(transform.position + Vector3.up * 2f, Vector3.one * 0.5f);
         }
+    }
+
+    // Public methods for external access
+    public float GetMissileProgress()
+    {
+        return (float)CurrentKillCount / killsRequiredForMissile;
     }
 }
