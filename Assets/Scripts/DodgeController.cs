@@ -25,6 +25,11 @@ public class DodgeController : MonoBehaviour
     [Header("Visual Effects")]
     public float rollRotationSpeed = 720f; // Degrees per second for full rotation
 
+    [Header("Bounds Settings")]
+    public float boundsCheckRadius = 0.5f; // Radius for collision detection
+    public LayerMask boundsLayerMask = -1; // Layer mask for bounds checking
+    public int collisionCheckSteps = 10; // Number of points to check along dodge path
+
     [Header("Debug")]
     public bool showDebugInfo = false;
 
@@ -122,18 +127,10 @@ public class DodgeController : MonoBehaviour
     {
         if (!canDodge || isDodging) return;
 
-        isDodging = true;
-        canDodge = false;
-        originalMovementEnabled = playerMovement.enabled;
-
-        // Disable player movement temporarily
-        playerMovement.enabled = false;
-
         // Calculate dodge direction in world space relative to cylinder
         Vector3 toCenter = playerMovement.cylinderTransform.position - transform.position;
         toCenter.y = 0;
         Vector3 tangent = Vector3.Cross(toCenter.normalized, Vector3.up);
-        Vector3 normal = -toCenter.normalized;
 
         worldDodgeDirection = Vector3.zero;
 
@@ -155,33 +152,36 @@ public class DodgeController : MonoBehaviour
             worldDodgeDirection = -tangent;
         }
 
-        // Store dodge start and target positions
+        // Store dodge start position
         dodgeStartPos = transform.position;
+
+        // Calculate initial target position
+        Vector3 tentativeTargetPos = CalculateTargetPosition(localDirection);
+
+        // Check for bounds collision and adjust target if necessary
+        Vector3 finalTargetPos = GetValidDodgeTarget(dodgeStartPos, tentativeTargetPos);
+
+        // If the final target is too close to start (meaning we hit bounds immediately), cancel dodge
+        if (Vector3.Distance(dodgeStartPos, finalTargetPos) < 0.5f)
+        {
+            if (showDebugInfo)
+            {
+                Debug.Log($"Dodge cancelled - would immediately hit bounds. Direction: {localDirection}");
+            }
+            return;
+        }
+
+        // Set the valid target position
+        dodgeTargetPos = finalTargetPos;
+
+        isDodging = true;
+        canDodge = false;
+        originalMovementEnabled = playerMovement.enabled;
+
+        // Disable player movement temporarily
+        playerMovement.enabled = false;
+
         dodgeStartTime = Time.time;
-
-        // Calculate target position
-        if (worldDodgeDirection.y != 0) // Vertical dodge
-        {
-            dodgeTargetPos = dodgeStartPos + worldDodgeDirection * dodgeDistance;
-        }
-        else // Horizontal dodge around cylinder
-        {
-            float cylinderRadius = playerMovement.cylinderTransform.localScale.x * 0.5f;
-            float currentAngle = Mathf.Atan2(transform.position.x - playerMovement.cylinderTransform.position.x,
-                                           transform.position.z - playerMovement.cylinderTransform.position.z);
-
-            dodgeStartAngle = currentAngle;
-            float angleChange = dodgeDistance / cylinderRadius;
-            if (localDirection == Vector3.right) angleChange = -angleChange;
-
-            dodgeTargetAngle = currentAngle + angleChange;
-
-            dodgeTargetPos = new Vector3(
-                cylinderRadius * Mathf.Sin(dodgeTargetAngle),
-                transform.position.y,
-                cylinderRadius * Mathf.Cos(dodgeTargetAngle)
-            );
-        }
 
         // Start visual and audio effects
         StartDodgeEffects();
@@ -195,7 +195,95 @@ public class DodgeController : MonoBehaviour
         if (showDebugInfo)
         {
             Debug.Log($"Dodge initiated in direction: {localDirection}, World direction: {worldDodgeDirection}");
+            Debug.Log($"Target position: {dodgeTargetPos}");
         }
+    }
+
+    Vector3 CalculateTargetPosition(Vector3 localDirection)
+    {
+        if (worldDodgeDirection.y != 0) // Vertical dodge
+        {
+            return dodgeStartPos + worldDodgeDirection * dodgeDistance;
+        }
+        else // Horizontal dodge around cylinder
+        {
+            float cylinderRadius = playerMovement.cylinderTransform.localScale.x * 0.5f;
+            float currentAngle = Mathf.Atan2(transform.position.x - playerMovement.cylinderTransform.position.x,
+                                           transform.position.z - playerMovement.cylinderTransform.position.z);
+
+            dodgeStartAngle = currentAngle;
+            float angleChange = dodgeDistance / cylinderRadius;
+            if (localDirection == Vector3.right) angleChange = -angleChange;
+
+            dodgeTargetAngle = currentAngle + angleChange;
+
+            return playerMovement.cylinderTransform.position + new Vector3(
+                cylinderRadius * Mathf.Sin(dodgeTargetAngle),
+                transform.position.y,
+                cylinderRadius * Mathf.Cos(dodgeTargetAngle)
+            );
+        }
+    }
+
+    Vector3 GetValidDodgeTarget(Vector3 startPos, Vector3 originalTarget)
+    {
+        Vector3 direction = (originalTarget - startPos).normalized;
+        float maxDistance = Vector3.Distance(startPos, originalTarget);
+
+        // Check multiple points along the path
+        for (int i = 1; i <= collisionCheckSteps; i++)
+        {
+            float checkDistance = (maxDistance / collisionCheckSteps) * i;
+            Vector3 checkPos = startPos + direction * checkDistance;
+
+            // Add the arc height that will be applied during dodge
+            float arcProgress = Mathf.Sin((float)i / collisionCheckSteps * Mathf.PI);
+            Vector3 checkPosWithArc = checkPos;
+            checkPosWithArc.y += arcProgress * 0.5f; // Match the arc height from UpdateDodgeMovement
+
+            if (IsPositionBlocked(checkPosWithArc))
+            {
+                // Found a collision, return the previous safe position
+                if (i == 1)
+                {
+                    // Even the first step is blocked
+                    return startPos;
+                }
+
+                float safeDistance = (maxDistance / collisionCheckSteps) * (i - 1);
+                Vector3 safePos = startPos + direction * safeDistance;
+
+                if (showDebugInfo)
+                {
+                    Debug.Log($"Collision detected at step {i}, using safe position at distance {safeDistance}");
+                }
+
+                return safePos;
+            }
+        }
+
+        // No collision found, use original target
+        return originalTarget;
+    }
+
+    bool IsPositionBlocked(Vector3 position)
+    {
+        // Check for overlapping colliders at this position
+        Collider[] overlapping = Physics.OverlapSphere(position, boundsCheckRadius, boundsLayerMask);
+
+        foreach (Collider col in overlapping)
+        {
+            if (col.CompareTag("Ceiling") || col.CompareTag("Floor"))
+            {
+                if (showDebugInfo)
+                {
+                    Debug.Log($"Position {position} blocked by {col.tag}");
+                }
+                return true;
+            }
+        }
+
+        return false;
     }
 
     void UpdateDodgeMovement()
@@ -227,12 +315,27 @@ public class DodgeController : MonoBehaviour
         // Smooth dodge movement using easing
         float easedProgress = EaseOutQuart(progress);
         Vector3 currentPos = Vector3.Lerp(dodgeStartPos, dodgeTargetPos, easedProgress);
-        transform.position = currentPos;
 
         // Add slight upward arc for visual appeal
         float arcHeight = 0.5f;
         float arcProgress = Mathf.Sin(progress * Mathf.PI);
         currentPos.y += arcProgress * arcHeight;
+
+        // Additional safety check during movement
+        if (IsPositionBlocked(currentPos))
+        {
+            // If we somehow hit a collider during movement, stop the dodge
+            transform.position = dodgeStartPos;
+            isDodging = false;
+            playerMovement.enabled = originalMovementEnabled;
+
+            if (showDebugInfo)
+            {
+                Debug.Log("Dodge interrupted by collision during movement");
+            }
+            return;
+        }
+
         transform.position = currentPos;
     }
 
@@ -357,6 +460,23 @@ public class DodgeController : MonoBehaviour
             Gizmos.color = Color.cyan;
             Gizmos.DrawWireSphere(dodgeTargetPos, 0.3f);
             Gizmos.DrawLine(dodgeStartPos, dodgeTargetPos);
+
+            // Draw collision check points along the path
+            Vector3 direction = (dodgeTargetPos - dodgeStartPos).normalized;
+            float distance = Vector3.Distance(dodgeStartPos, dodgeTargetPos);
+
+            for (int i = 1; i <= collisionCheckSteps; i++)
+            {
+                float checkDistance = (distance / collisionCheckSteps) * i;
+                Vector3 checkPos = dodgeStartPos + direction * checkDistance;
+
+                // Add arc height
+                float arcProgress = Mathf.Sin((float)i / collisionCheckSteps * Mathf.PI);
+                checkPos.y += arcProgress * 0.5f;
+
+                Gizmos.color = IsPositionBlocked(checkPos) ? Color.red : Color.green;
+                Gizmos.DrawWireSphere(checkPos, boundsCheckRadius * 0.5f);
+            }
         }
 
         // Draw invincibility status
@@ -365,5 +485,9 @@ public class DodgeController : MonoBehaviour
             Gizmos.color = Color.yellow;
             Gizmos.DrawWireSphere(transform.position, 1f);
         }
+
+        // Draw bounds check radius
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, boundsCheckRadius);
     }
 }
