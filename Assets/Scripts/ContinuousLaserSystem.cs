@@ -21,8 +21,11 @@ public class ContinuousLaserSystem : MonoBehaviour
     private bool isOverheated = false;
     private float overheatTimer = 0f;
 
-    [Header("UI")]
-    public Slider heatSlider; // Reference to the UI slider
+    [Header("UI - Radial Heat Display")]
+    public Image heatRadialImage; // Reference to the radial UI image
+    public Color normalColor = Color.green;
+    public Color warningColor = Color.yellow;
+    public Color overheatColor = Color.red;
 
     [Header("Audio")]
     public AudioSource audioSource;
@@ -42,11 +45,13 @@ public class ContinuousLaserSystem : MonoBehaviour
             }
         }
 
-        // Initialize the heat slider
-        if (heatSlider != null)
+        // Initialize the radial heat display
+        if (heatRadialImage != null)
         {
-            heatSlider.maxValue = maxHeat;
-            heatSlider.value = currentHeat;
+            heatRadialImage.type = Image.Type.Filled;
+            heatRadialImage.fillMethod = Image.FillMethod.Radial360;
+            heatRadialImage.fillAmount = 0f;
+            heatRadialImage.color = normalColor;
         }
     }
 
@@ -95,26 +100,23 @@ public class ContinuousLaserSystem : MonoBehaviour
 
     void UpdateUI()
     {
-        if (heatSlider != null)
+        if (heatRadialImage != null)
         {
-            heatSlider.value = currentHeat;
+            // Update fill amount (0 to 1)
+            heatRadialImage.fillAmount = currentHeat / maxHeat;
 
-            // Optional: Change slider color based on heat level
-            Image fillImage = heatSlider.fillRect.GetComponent<Image>();
-            if (fillImage != null)
+            // Update color based on heat level
+            if (isOverheated)
             {
-                if (isOverheated)
-                {
-                    fillImage.color = Color.red;
-                }
-                else if (currentHeat >= overheatThreshold)
-                {
-                    fillImage.color = Color.yellow;
-                }
-                else
-                {
-                    fillImage.color = Color.green;
-                }
+                heatRadialImage.color = overheatColor;
+            }
+            else if (currentHeat >= overheatThreshold)
+            {
+                heatRadialImage.color = warningColor;
+            }
+            else
+            {
+                heatRadialImage.color = normalColor;
             }
         }
     }
