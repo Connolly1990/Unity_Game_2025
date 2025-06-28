@@ -41,6 +41,7 @@ public class DodgeController : MonoBehaviour
     private Vector3 dodgeStartPos;
     private Vector3 dodgeTargetPos;
     private Vector3 worldDodgeDirection;
+    private bool isVerticalDodge; // NEW: Track if this is a vertical dodge
     private float dodgeStartTime;
     private float dodgeStartAngle;
     private float dodgeTargetAngle;
@@ -128,28 +129,52 @@ public class DodgeController : MonoBehaviour
         if (!canDodge || isDodging) return;
 
         // Calculate dodge direction in world space relative to cylinder
-        Vector3 toCenter = playerMovement.cylinderTransform.position - transform.position;
-        toCenter.y = 0;
-        Vector3 tangent = Vector3.Cross(toCenter.normalized, Vector3.up);
+        Vector3 playerPos = transform.position;
+        Vector3 cylinderCenter = playerMovement.cylinderTransform.position;
+
+        // Get the radial direction from cylinder center to player (only XZ plane)
+        Vector3 radialDirection = new Vector3(
+            playerPos.x - cylinderCenter.x,
+            0,
+            playerPos.z - cylinderCenter.z
+        ).normalized;
+
+        // Calculate tangent direction (perpendicular to radial, around the cylinder)
+        Vector3 tangent = Vector3.Cross(Vector3.up, radialDirection).normalized;
 
         worldDodgeDirection = Vector3.zero;
+        isVerticalDodge = false; // Reset flag
 
         // Convert local direction to world direction on cylinder
         if (localDirection == Vector3.forward) // Up
         {
             worldDodgeDirection = Vector3.up;
+            isVerticalDodge = true;
         }
         else if (localDirection == Vector3.back) // Down
         {
             worldDodgeDirection = Vector3.down;
+            isVerticalDodge = true;
         }
         else if (localDirection == Vector3.left) // Counter-clockwise around cylinder
         {
             worldDodgeDirection = tangent;
+            isVerticalDodge = false;
         }
         else if (localDirection == Vector3.right) // Clockwise around cylinder
         {
             worldDodgeDirection = -tangent;
+            isVerticalDodge = false;
+        }
+
+        if (showDebugInfo)
+        {
+            Debug.Log($"=== DODGE DEBUG ===");
+            Debug.Log($"Local Direction: {localDirection}");
+            Debug.Log($"World Dodge Direction: {worldDodgeDirection}");
+            Debug.Log($"Is Vertical Dodge: {isVerticalDodge}");
+            Debug.Log($"Radial Direction: {radialDirection}");
+            Debug.Log($"Tangent: {tangent}");
         }
 
         // Store dodge start position
@@ -194,16 +219,24 @@ public class DodgeController : MonoBehaviour
 
         if (showDebugInfo)
         {
-            Debug.Log($"Dodge initiated in direction: {localDirection}, World direction: {worldDodgeDirection}");
-            Debug.Log($"Target position: {dodgeTargetPos}");
+            Debug.Log($"=== TARGET CALCULATION ===");
+            Debug.Log($"Is Vertical Dodge: {isVerticalDodge}");
+            Debug.Log($"Start Position: {dodgeStartPos}");
+            Debug.Log($"Tentative Target: {tentativeTargetPos}");
+            Debug.Log($"Final Target: {finalTargetPos}");
         }
     }
 
     Vector3 CalculateTargetPosition(Vector3 localDirection)
     {
-        if (worldDodgeDirection.y != 0) // Vertical dodge
+        if (isVerticalDodge) // Use the flag instead of checking worldDodgeDirection.y
         {
-            return dodgeStartPos + worldDodgeDirection * dodgeDistance;
+            Vector3 verticalTarget = dodgeStartPos + worldDodgeDirection * dodgeDistance;
+            if (showDebugInfo)
+            {
+                Debug.Log($"Vertical Target Calculated: {verticalTarget}");
+            }
+            return verticalTarget;
         }
         else // Horizontal dodge around cylinder
         {
@@ -217,11 +250,21 @@ public class DodgeController : MonoBehaviour
 
             dodgeTargetAngle = currentAngle + angleChange;
 
-            return playerMovement.cylinderTransform.position + new Vector3(
-                cylinderRadius * Mathf.Sin(dodgeTargetAngle),
-                transform.position.y,
-                cylinderRadius * Mathf.Cos(dodgeTargetAngle)
+            // Fixed: Use the player's current Y position directly, don't add it to cylinder position
+            Vector3 horizontalTarget = new Vector3(
+                playerMovement.cylinderTransform.position.x + cylinderRadius * Mathf.Sin(dodgeTargetAngle),
+                transform.position.y, // Use player's current Y directly
+                playerMovement.cylinderTransform.position.z + cylinderRadius * Mathf.Cos(dodgeTargetAngle)
             );
+
+            if (showDebugInfo)
+            {
+                Debug.Log($"Horizontal Target Calculated: {horizontalTarget}");
+                Debug.Log($"Current Y: {transform.position.y}, Target Y: {horizontalTarget.y}");
+                Debug.Log($"Angle Change: {angleChange}, Start Angle: {dodgeStartAngle}, Target Angle: {dodgeTargetAngle}");
+            }
+
+            return horizontalTarget;
         }
     }
 
@@ -236,10 +279,13 @@ public class DodgeController : MonoBehaviour
             float checkDistance = (maxDistance / collisionCheckSteps) * i;
             Vector3 checkPos = startPos + direction * checkDistance;
 
-            // Add the arc height that will be applied during dodge
-            float arcProgress = Mathf.Sin((float)i / collisionCheckSteps * Mathf.PI);
+            // Add the arc height only for vertical dodges
             Vector3 checkPosWithArc = checkPos;
-            checkPosWithArc.y += arcProgress * 0.5f; // Match the arc height from UpdateDodgeMovement
+            if (isVerticalDodge) // Use the flag instead of checking worldDodgeDirection.y
+            {
+                float arcProgress = Mathf.Sin((float)i / collisionCheckSteps * Mathf.PI);
+                checkPosWithArc.y += arcProgress * 0.5f; // Match the arc height from UpdateDodgeMovement
+            }
 
             if (IsPositionBlocked(checkPosWithArc))
             {
@@ -298,7 +344,7 @@ public class DodgeController : MonoBehaviour
             isDodging = false;
 
             // Update the player movement's angle if we dodged horizontally
-            if (worldDodgeDirection.y == 0) // Horizontal dodge
+            if (!isVerticalDodge) // Use the flag instead of checking worldDodgeDirection.y
             {
                 UpdatePlayerMovementAngle();
             }
@@ -316,10 +362,25 @@ public class DodgeController : MonoBehaviour
         float easedProgress = EaseOutQuart(progress);
         Vector3 currentPos = Vector3.Lerp(dodgeStartPos, dodgeTargetPos, easedProgress);
 
-        // Add slight upward arc for visual appeal
-        float arcHeight = 0.5f;
-        float arcProgress = Mathf.Sin(progress * Mathf.PI);
-        currentPos.y += arcProgress * arcHeight;
+        // Only add upward arc for vertical dodges, not horizontal ones
+        if (isVerticalDodge) // Use the flag instead of checking worldDodgeDirection.y
+        {
+            float arcHeight = 0.5f;
+            float arcProgress = Mathf.Sin(progress * Mathf.PI);
+            currentPos.y += arcProgress * arcHeight;
+
+            if (showDebugInfo && progress < 0.1f) // Only log at start
+            {
+                Debug.Log($"VERTICAL DODGE - Adding arc. Base Y: {Vector3.Lerp(dodgeStartPos, dodgeTargetPos, easedProgress).y}, Arc: {arcProgress * arcHeight}, Final Y: {currentPos.y}");
+            }
+        }
+        else
+        {
+            if (showDebugInfo && progress < 0.1f) // Only log at start
+            {
+                Debug.Log($"HORIZONTAL DODGE - No arc. Y stays: {currentPos.y}");
+            }
+        }
 
         // Additional safety check during movement
         if (IsPositionBlocked(currentPos))
@@ -470,9 +531,12 @@ public class DodgeController : MonoBehaviour
                 float checkDistance = (distance / collisionCheckSteps) * i;
                 Vector3 checkPos = dodgeStartPos + direction * checkDistance;
 
-                // Add arc height
-                float arcProgress = Mathf.Sin((float)i / collisionCheckSteps * Mathf.PI);
-                checkPos.y += arcProgress * 0.5f;
+                // Add arc height only for vertical dodges
+                if (isVerticalDodge) // Use the flag instead of checking worldDodgeDirection.y
+                {
+                    float arcProgress = Mathf.Sin((float)i / collisionCheckSteps * Mathf.PI);
+                    checkPos.y += arcProgress * 0.5f;
+                }
 
                 Gizmos.color = IsPositionBlocked(checkPos) ? Color.red : Color.green;
                 Gizmos.DrawWireSphere(checkPos, boundsCheckRadius * 0.5f);

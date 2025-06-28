@@ -62022,6 +62022,10 @@ PrefabInstance:
       propertyPath: m_TagString
       value: FirePoint
       objectReference: {fileID: 0}
+    - target: {fileID: 4222133191456739938, guid: f010a16e0742e2e49b9e44ac436cd1c0, type: 3}
+      propertyPath: showDebugInfo
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7398101863961760288, guid: f010a16e0742e2e49b9e44ac436cd1c0, type: 3}
       propertyPath: m_Name
       value: Jet
