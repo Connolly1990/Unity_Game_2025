@@ -255,7 +255,7 @@ ParticleSystem:
       serializedVersion: 2
       minMaxState: 0
       minColor: {r: 1, g: 1, b: 1, a: 1}
-      maxColor: {r: 0.9245283, g: 0.06541473, b: 0.09871249, a: 0.11372549}
+      maxColor: {r: 0.9245283, g: 0.06541473, b: 0, a: 0.6509804}
       maxGradient:
         serializedVersion: 2
         key0: {r: 1, g: 1, b: 1, a: 1}
@@ -4875,27 +4875,27 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: ae31b897c1d478248aa5d6c5989cb329, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.3
+      value: 0.6
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ae31b897c1d478248aa5d6c5989cb329, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.3
+      value: 0.6
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ae31b897c1d478248aa5d6c5989cb329, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.3
+      value: 0.6
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ae31b897c1d478248aa5d6c5989cb329, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -19.219656
+      value: -19.24345
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ae31b897c1d478248aa5d6c5989cb329, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 8.988739
+      value: 8.874421
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ae31b897c1d478248aa5d6c5989cb329, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 4.926896
+      value: 4.7766595
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ae31b897c1d478248aa5d6c5989cb329, type: 3}
       propertyPath: m_LocalRotation.w
@@ -4929,6 +4929,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Resized-Bullet
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: ae31b897c1d478248aa5d6c5989cb329, type: 3}
+      propertyPath: m_TagString
+      value: EnemyLaser
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
@@ -4939,6 +4943,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ae31b897c1d478248aa5d6c5989cb329, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2706266283206423901}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ae31b897c1d478248aa5d6c5989cb329, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2663744833699472290}
   m_SourcePrefab: {fileID: 100100000, guid: ae31b897c1d478248aa5d6c5989cb329, type: 3}
 --- !u!4 &5066917634333031435 stripped
 Transform:
@@ -4973,3 +4980,20 @@ CapsuleCollider:
   m_Height: 1.442201
   m_Direction: 2
   m_Center: {x: -0.0000072146454, y: -0.11711326, z: -0.0070413947}
+--- !u!114 &2663744833699472290
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5555926893651650225}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37b75c62dd9639643be107783058f51c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  speed: 20
+  damage: 1
+  lifetime: 5
+  isPlayerProjectile: 1
+  impactEffectPrefab: {fileID: 0}

@@ -223,7 +223,7 @@ ParticleSystem:
       serializedVersion: 2
       minMaxState: 0
       minColor: {r: 1, g: 1, b: 1, a: 1}
-      maxColor: {r: 0.26377296, g: 0.7924528, b: 0.25044498, a: 0.11372549}
+      maxColor: {r: 0.26377296, g: 0.7924528, b: 0, a: 0.68235296}
       maxGradient:
         serializedVersion: 2
         key0: {r: 1, g: 1, b: 1, a: 1}
@@ -4875,27 +4875,27 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 39f06ef28f2ad0e4fb1f42894d4ad75f, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.3
+      value: 0.6
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 39f06ef28f2ad0e4fb1f42894d4ad75f, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.3
+      value: 0.6
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 39f06ef28f2ad0e4fb1f42894d4ad75f, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.3
+      value: 0.6
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 39f06ef28f2ad0e4fb1f42894d4ad75f, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -19.2188
+      value: -19.20799
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 39f06ef28f2ad0e4fb1f42894d4ad75f, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 8.9864
+      value: 8.793714
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 39f06ef28f2ad0e4fb1f42894d4ad75f, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 5.3782
+      value: 5.0005426
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 39f06ef28f2ad0e4fb1f42894d4ad75f, type: 3}
       propertyPath: m_LocalRotation.w
@@ -4929,6 +4929,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Resized-Bullet-Green
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 39f06ef28f2ad0e4fb1f42894d4ad75f, type: 3}
+      propertyPath: m_TagString
+      value: PlayerLaser
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
@@ -4939,6 +4943,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 39f06ef28f2ad0e4fb1f42894d4ad75f, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3502711641082999625}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 39f06ef28f2ad0e4fb1f42894d4ad75f, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6898434998370817060}
   m_SourcePrefab: {fileID: 100100000, guid: 39f06ef28f2ad0e4fb1f42894d4ad75f, type: 3}
 --- !u!4 &8325376392597936445 stripped
 Transform:
@@ -4973,3 +4980,18 @@ CapsuleCollider:
   m_Height: 1.4422007
   m_Direction: 2
   m_Center: {x: -0.0000072146454, y: -0.11711326, z: -0.014492869}
+--- !u!114 &6898434998370817060
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8701654958049149831}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7447aa9d2ea51604288b74b0f350cf73, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  speed: 20
+  lifetime: 2
+  isNukeLaser: 0

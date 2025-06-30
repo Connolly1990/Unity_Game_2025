@@ -199,7 +199,7 @@ MonoBehaviour:
   directionChangeTime: 3
   detectionRange: 10
   fireRate: 1
-  laserPrefab: {fileID: 2597666852404115660, guid: 655afc460289a754bb641e8f1e72c6a5, type: 3}
+  laserPrefab: {fileID: 5555926893651650225, guid: 37acd7b0886bcb140a0ead7f293de006, type: 3}
   laserSpeed: 10
   shootContinuously: 1
   explosionPrefab: {fileID: 3555101640308003225, guid: 16bca5d679e91cf49bf7d7bad271c751, type: 3}
