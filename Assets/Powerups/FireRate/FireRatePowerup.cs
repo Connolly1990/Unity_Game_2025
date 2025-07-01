@@ -158,6 +158,9 @@ public class FireRatePowerup : MonoBehaviour
         originalFireRate = laserSystem.fireRate;
         laserSystem.fireRate = originalFireRate / fireRateMultiplier; // Divide to increase fire rate
 
+        // Disable the overheat system during the boost
+        laserSystem.DisableOverheat();
+
         boostActive = true;
         boostEndTime = Time.time + boostDuration;
 
@@ -167,7 +170,7 @@ public class FireRatePowerup : MonoBehaviour
             AudioSource.PlayClipAtPoint(boostActivateSound, transform.position, soundVolume);
         }
 
-        Debug.Log($"Fire rate boosted by {fireRateMultiplier}x for {boostDuration} seconds!");
+        Debug.Log($"Fire rate boosted by {fireRateMultiplier}x for {boostDuration} seconds! Overheat disabled.");
         UpdateUI();
     }
 
@@ -177,6 +180,10 @@ public class FireRatePowerup : MonoBehaviour
 
         // Restore original fire rate
         laserSystem.fireRate = originalFireRate;
+
+        // Re-enable the overheat system
+        laserSystem.EnableOverheat();
+
         boostActive = false;
 
         // Play boost end sound
@@ -185,7 +192,7 @@ public class FireRatePowerup : MonoBehaviour
             AudioSource.PlayClipAtPoint(boostEndSound, transform.position, soundVolume);
         }
 
-        Debug.Log("Fire rate boost ended!");
+        Debug.Log("Fire rate boost ended! Overheat system re-enabled.");
 
         // Clean up after boost ends
         CleanupQuest();
@@ -235,11 +242,11 @@ public class FireRatePowerup : MonoBehaviour
         currentKills = 0;
         isComplete = false;
         questStarted = false;
-        boostActive = false;
 
-        if (laserSystem != null && boostActive)
+        // End boost if it's currently active
+        if (boostActive)
         {
-            laserSystem.fireRate = originalFireRate;
+            EndFireRateBoost();
         }
 
         UpdateUI();
@@ -262,10 +269,11 @@ public class FireRatePowerup : MonoBehaviour
 
     private void OnDestroy()
     {
-        // Restore fire rate if boost was active when destroyed
+        // Restore fire rate and overheat system if boost was active when destroyed
         if (boostActive && laserSystem != null)
         {
             laserSystem.fireRate = originalFireRate;
+            laserSystem.EnableOverheat();
         }
 
         // Clear the static reference when this object is destroyed

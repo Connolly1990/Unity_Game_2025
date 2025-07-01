@@ -21,11 +21,15 @@ public class ContinuousLaserSystem : MonoBehaviour
     private bool isOverheated = false;
     private float overheatTimer = 0f;
 
+    // New: Overheat disable functionality
+    private bool overheatDisabled = false;
+
     [Header("UI - Radial Heat Display")]
     public Image heatRadialImage; // Reference to the radial UI image
     public Color normalColor = Color.green;
     public Color warningColor = Color.yellow;
     public Color overheatColor = Color.red;
+    public Color disabledColor = Color.blue; // New color for when overheat is disabled
 
     [Header("Audio")]
     public AudioSource audioSource;
@@ -60,12 +64,13 @@ public class ContinuousLaserSystem : MonoBehaviour
         UpdateHeatSystem();
         UpdateUI();
 
-        // Check if player can shoot, spacebar is held, fire rate cooldown is over, and not overheated
+        // Check if player can shoot, spacebar is held, fire rate cooldown is over, and not overheated (unless overheat is disabled)
+        bool canFireDueToHeat = overheatDisabled || (!isOverheated && currentHeat < overheatThreshold);
+
         if (playerMovement.CanShoot &&
             Input.GetKey(KeyCode.Space) &&
             Time.time >= nextFireTime &&
-            !isOverheated &&
-            currentHeat < overheatThreshold)
+            canFireDueToHeat)
         {
             FireLaser();
             nextFireTime = Time.time + fireRate;
@@ -74,6 +79,12 @@ public class ContinuousLaserSystem : MonoBehaviour
 
     void UpdateHeatSystem()
     {
+        // Skip heat system entirely if disabled
+        if (overheatDisabled)
+        {
+            return;
+        }
+
         // Handle overheat state
         if (isOverheated)
         {
@@ -102,21 +113,30 @@ public class ContinuousLaserSystem : MonoBehaviour
     {
         if (heatRadialImage != null)
         {
-            // Update fill amount (0 to 1)
-            heatRadialImage.fillAmount = currentHeat / maxHeat;
-
-            // Update color based on heat level
-            if (isOverheated)
+            if (overheatDisabled)
             {
-                heatRadialImage.color = overheatColor;
-            }
-            else if (currentHeat >= overheatThreshold)
-            {
-                heatRadialImage.color = warningColor;
+                // Show a different visual state when overheat is disabled
+                heatRadialImage.fillAmount = 0f;
+                heatRadialImage.color = disabledColor;
             }
             else
             {
-                heatRadialImage.color = normalColor;
+                // Update fill amount (0 to 1)
+                heatRadialImage.fillAmount = currentHeat / maxHeat;
+
+                // Update color based on heat level
+                if (isOverheated)
+                {
+                    heatRadialImage.color = overheatColor;
+                }
+                else if (currentHeat >= overheatThreshold)
+                {
+                    heatRadialImage.color = warningColor;
+                }
+                else
+                {
+                    heatRadialImage.color = normalColor;
+                }
             }
         }
     }
@@ -140,9 +160,12 @@ public class ContinuousLaserSystem : MonoBehaviour
     {
         if (firePoint == null) return;
 
-        // Add heat when firing
-        currentHeat += heatPerShot;
-        currentHeat = Mathf.Min(currentHeat, maxHeat);
+        // Add heat when firing (only if overheat system is enabled)
+        if (!overheatDisabled)
+        {
+            currentHeat += heatPerShot;
+            currentHeat = Mathf.Min(currentHeat, maxHeat);
+        }
 
         // Calculate tangent direction using cylinder math
         Vector3 toCenter = firePoint.position - playerMovement.cylinderTransform.position;
@@ -170,6 +193,27 @@ public class ContinuousLaserSystem : MonoBehaviour
         {
             audioSource.PlayOneShot(laserShootSound);
         }
+    }
+
+    // New methods for controlling overheat system
+    public void DisableOverheat()
+    {
+        overheatDisabled = true;
+        // Clear any existing overheat state
+        isOverheated = false;
+        overheatTimer = 0f;
+        Debug.Log("Overheat system disabled");
+    }
+
+    public void EnableOverheat()
+    {
+        overheatDisabled = false;
+        Debug.Log("Overheat system enabled");
+    }
+
+    public bool IsOverheatDisabled()
+    {
+        return overheatDisabled;
     }
 
     // Public methods for external access (useful for UI or other systems)
