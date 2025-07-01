@@ -15,11 +15,16 @@ public class EnemyScoreTracker : MonoBehaviour
     [Tooltip("Force spawn offset from enemy position (to avoid overlap)")]
     public Vector3 dropOffset = Vector3.up * 0.5f;
 
-    private void OnDestroy()
+    private bool hasBeenKilled = false; // Prevent double-processing
+
+    // Public method to call when enemy is killed by projectile/damage
+    public void OnEnemyDeath()
     {
-        // Don't award points when destroyed because of scene change or game exit
-        if (!gameObject.scene.isLoaded)
-            return;
+        // Prevent multiple calls
+        if (hasBeenKilled) return;
+        hasBeenKilled = true;
+
+        Debug.Log($"Enemy {gameObject.name} died! Awarding {pointsValue} points");
 
         // Add score when enemy is destroyed
         if (ScoreManager.Instance != null)
@@ -39,6 +44,20 @@ public class EnemyScoreTracker : MonoBehaviour
         {
             player.OnEnemyKilled();
         }
+
+        // Destroy the enemy after processing
+        Destroy(gameObject);
+    }
+
+    private void OnDestroy()
+    {
+        // Fallback for when enemy is destroyed directly (like scene changes)
+        // Only process if we haven't already been killed properly
+        if (!hasBeenKilled && gameObject.scene.isLoaded)
+        {
+            Debug.Log($"Enemy {gameObject.name} destroyed via OnDestroy - processing death");
+            OnEnemyDeath();
+        }
     }
 
     private void NotifyPowerupQuests()
@@ -49,11 +68,8 @@ public class EnemyScoreTracker : MonoBehaviour
             FireRatePowerup.activeFireRateQuest.OnEnemyKilled();
         }
 
-        // Notify the nuke quest about parts collected (only if quest is started)
-        if (LaserNukePowerup.activeNukeQuest != null && LaserNukePowerup.activeNukeQuest.IsQuestStarted())
-        {
-            LaserNukePowerup.activeNukeQuest.OnPartCollected();
-        }
+        // REMOVED: Don't notify nuke quest here - parts should only count when actually picked up!
+        // The nuke quest will be notified when the player picks up the dropped part instead
     }
 
     private void TryDropEnemyPart()

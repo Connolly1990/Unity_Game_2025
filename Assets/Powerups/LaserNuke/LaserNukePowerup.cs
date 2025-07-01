@@ -9,7 +9,7 @@ public class LaserNukePowerup : MonoBehaviour
     public int partsNeeded = 5;
     private int currentParts = 0;
     private bool isComplete = false;
-    private bool questStarted = false; // Track if quest has been started
+    private bool questStarted = false;
 
     [Header("Laser Nuke Settings")]
     public GameObject laserNukePrefab;
@@ -27,22 +27,16 @@ public class LaserNukePowerup : MonoBehaviour
 
     private void Start()
     {
-        // Find required components by tags
         FindRequiredComponents();
-
-        // Register this instance globally
         activeNukeQuest = this;
         currentParts = 0;
         isComplete = false;
         questStarted = false;
-
-        // UI is already set to inactive in FindRequiredComponents()
         Debug.Log("Laser Nuke Powerup ready to be picked up!");
     }
 
     private void FindRequiredComponents()
     {
-        // Find fire point by tag
         GameObject firePointObj = GameObject.FindGameObjectWithTag("FirePoint");
         if (firePointObj != null)
         {
@@ -53,14 +47,12 @@ public class LaserNukePowerup : MonoBehaviour
             Debug.LogError("LaserNukePowerup: No GameObject with tag 'FirePoint' found!");
         }
 
-        // Find player movement component
         playerMovement = Object.FindFirstObjectByType<CylinderPlayerMovement>();
         if (playerMovement == null)
         {
             Debug.LogError("LaserNukePowerup: No CylinderPlayerMovement found in scene!");
         }
 
-        // Find UI elements by tag
         GameObject objectiveUI = GameObject.FindGameObjectWithTag("Objective1");
         if (objectiveUI != null)
         {
@@ -76,7 +68,6 @@ public class LaserNukePowerup : MonoBehaviour
                 Debug.LogError("LaserNukePowerup: No TextMeshProUGUI component found on 'Objective1' GameObject or its children!");
             }
 
-            // Ensure UI is initially hidden and ready for this new quest
             progressUI.SetActive(false);
         }
         else
@@ -90,7 +81,6 @@ public class LaserNukePowerup : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             StartNukeQuest();
-            // Hide the powerup pickup but don't destroy it yet - we need it to track the quest
             GetComponent<Renderer>().enabled = false;
             GetComponent<Collider>().enabled = false;
         }
@@ -103,18 +93,35 @@ public class LaserNukePowerup : MonoBehaviour
         UpdateUI();
     }
 
+    // This method should ONLY be called when picking up physical part objects
     public void OnPartCollected()
     {
-        // Only count parts if quest has been started by picking up the powerup
-        if (!questStarted || isComplete) return;
+        Debug.Log($"OnPartCollected() called! Quest Started: {questStarted}, Current Parts: {currentParts}, Is Complete: {isComplete}");
+
+        if (!questStarted || isComplete)
+        {
+            Debug.Log("Part collection ignored - quest not started or already complete");
+            return;
+        }
 
         currentParts++;
+        Debug.Log($"Part collected! Now have {currentParts}/{partsNeeded} parts");
         UpdateUI();
 
         if (currentParts >= partsNeeded)
         {
             CompleteNukeQuest();
         }
+    }
+
+    // This method can be called when enemies die (for other purposes like scoring)
+    // but does NOT count toward nuke parts
+    public void OnEnemyKilled()
+    {
+        Debug.Log("Enemy killed - but this doesn't count toward nuke parts!");
+        // You can add other enemy death logic here if needed
+        // Like updating score, playing sounds, etc.
+        // But it won't affect the nuke quest
     }
 
     public bool IsQuestStarted()
@@ -133,11 +140,8 @@ public class LaserNukePowerup : MonoBehaviour
 
         Debug.Log("Laser Nuke is fully charged!");
         UpdateUI();
-
-        // Fire the nuke laser immediately
         FireNukeLaser();
 
-        // Hide UI and clean up after firing
         if (progressUI != null)
         {
             Invoke("CleanupQuest", 1f);
@@ -155,8 +159,6 @@ public class LaserNukePowerup : MonoBehaviour
             progressUI.SetActive(false);
         }
 
-        // Clear the static reference and destroy this quest object
-        // This ensures a new powerup must be picked up to start another quest
         activeNukeQuest = null;
         Destroy(gameObject);
     }
@@ -165,31 +167,26 @@ public class LaserNukePowerup : MonoBehaviour
     {
         if (laserNukePrefab == null || firePoint == null || playerMovement == null) return;
 
-        // Play nuke launch sound
         if (nukeLaunchSound != null)
         {
             AudioSource.PlayClipAtPoint(nukeLaunchSound, firePoint.position, soundVolume);
         }
 
-        // Calculate tangent direction using cylinder math (same as normal laser)
         Vector3 toCenter = firePoint.position - playerMovement.cylinderTransform.position;
         toCenter.y = 0;
         Vector3 tangent = Vector3.Cross(Vector3.up, toCenter.normalized).normalized;
 
-        // Fire nuke in both directions
-        FireNukeInDirection(tangent);   // One direction
-        FireNukeInDirection(-tangent);  // Opposite direction
+        FireNukeInDirection(tangent);
+        FireNukeInDirection(-tangent);
 
         Debug.Log("Laser Nukes fired in both directions!");
     }
 
     private void FireNukeInDirection(Vector3 direction)
     {
-        // Instantiate the nuke laser
         GameObject nukeLaser = Instantiate(laserNukePrefab, firePoint.position,
                                         Quaternion.LookRotation(direction, Vector3.up));
 
-        // Initialize the nuke laser
         var nukeComponent = nukeLaser.GetComponent<LaserProjectile>();
         if (nukeComponent != null)
         {
@@ -211,7 +208,6 @@ public class LaserNukePowerup : MonoBehaviour
             }
         }
 
-        // Show UI immediately when quest starts, regardless of parts collected
         if (progressUI != null && questStarted)
         {
             progressUI.SetActive(true);
@@ -246,7 +242,6 @@ public class LaserNukePowerup : MonoBehaviour
 
     private void OnDestroy()
     {
-        // Clear the static reference when this object is destroyed
         if (activeNukeQuest == this)
         {
             activeNukeQuest = null;
