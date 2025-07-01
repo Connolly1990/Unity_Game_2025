@@ -252,7 +252,6 @@ public class DodgeController : MonoBehaviour
         transform.position = currentPos;
     }
 
-    // ✅ THIS IS THE ONLY MODIFIED METHOD
     void StartDodgeEffects()
     {
         if (dodgeParticleEffect != null)
@@ -323,6 +322,40 @@ public class DodgeController : MonoBehaviour
         return 1f - Mathf.Pow(1f - t, 4f);
     }
 
+    // ✅ NEW COLLISION DETECTION METHODS
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Enemy"))
+        {
+            HandleEnemyCollision(other);
+        }
+    }
+
+    void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Enemy"))
+        {
+            HandleEnemyCollision(collision.collider);
+        }
+    }
+
+    void HandleEnemyCollision(Collider enemyCollider)
+    {
+        if (isInvincible)
+        {
+            // Player is invincible - no damage should be taken
+            if (showDebugInfo)
+                Debug.Log($"Enemy collision ignored due to i-frames: {enemyCollider.name}");
+            return;
+        }
+
+        // If not invincible, let the normal damage system handle it
+        // You might want to add damage handling here or let other scripts handle it
+        if (showDebugInfo)
+            Debug.Log($"Enemy collision while vulnerable: {enemyCollider.name}");
+    }
+
+    // ✅ PUBLIC PROPERTIES AND METHODS
     public bool IsInvincible => isInvincible;
     public bool IsDodging => isDodging;
     public bool CanDodge => canDodge;

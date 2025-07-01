@@ -30,6 +30,9 @@ public class PlayerHealth : MonoBehaviour
     [SerializeField] private GameObject shieldVisual; // 🔹 Assign your blue transparent sphere here
     private int shieldHitsRemaining = 0;
 
+    // ✅ NEW: Reference to dodge controller for invincibility check
+    private DodgeController dodgeController;
+
     private Renderer playerRenderer;
     private Color originalColor;
 
@@ -49,6 +52,13 @@ public class PlayerHealth : MonoBehaviour
         playerRenderer = GetComponent<Renderer>();
         if (playerRenderer != null)
             originalColor = playerRenderer.material.color;
+
+        // ✅ NEW: Get reference to dodge controller
+        dodgeController = GetComponent<DodgeController>();
+        if (dodgeController == null)
+        {
+            Debug.LogWarning("DodgeController not found on player! Dodge invincibility won't work.");
+        }
 
         if (findHeartsByTag)
         {
@@ -85,10 +95,20 @@ public class PlayerHealth : MonoBehaviour
     {
         foreach (string tag in damageTags)
         {
-            if (other.CompareTag(tag) && !isInvincible)
+            if (other.CompareTag(tag))
             {
-                TakeDamage(1);
-                break;
+                // ✅ MODIFIED: Check both health invincibility AND dodge invincibility
+                bool isDodgeInvincible = dodgeController != null && dodgeController.IsInvincible;
+
+                if (!isInvincible && !isDodgeInvincible)
+                {
+                    TakeDamage(1);
+                    break;
+                }
+                else if (isDodgeInvincible)
+                {
+                    Debug.Log($"Damage from {other.name} prevented by dodge i-frames");
+                }
             }
         }
     }
@@ -96,6 +116,13 @@ public class PlayerHealth : MonoBehaviour
     public void TakeDamage(int damage)
     {
         if (isInvincible || currentHealth <= 0) return;
+
+        // ✅ ADDED: Double-check dodge invincibility here too
+        if (dodgeController != null && dodgeController.IsInvincible)
+        {
+            Debug.Log("Damage prevented by dodge i-frames in TakeDamage method");
+            return;
+        }
 
         // 🔹 Shield logic
         if (shieldHitsRemaining > 0)
@@ -199,6 +226,16 @@ public class PlayerHealth : MonoBehaviour
         if (shieldVisual != null)
         {
             shieldVisual.SetActive(true);
+        }
+    }
+
+    // ✅ NEW: Public property to check if player is invincible from any source
+    public bool IsInvincible
+    {
+        get
+        {
+            bool dodgeInvincible = dodgeController != null && dodgeController.IsInvincible;
+            return isInvincible || dodgeInvincible;
         }
     }
 
