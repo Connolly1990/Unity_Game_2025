@@ -5007,7 +5007,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   partsNeeded: 5
-  laserNukePrefab: {fileID: 2597666852404115660, guid: f0dfedb76e53d814f9c8bc68c6027465, type: 3}
+  laserNukePrefab: {fileID: 5966435608419081106, guid: 52a6afaada9c458498670ed8ae5383f9, type: 3}
   fullChargeSound: {fileID: 0}
   nukeLaunchSound: {fileID: 0}
   soundVolume: 1
