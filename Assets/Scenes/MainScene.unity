@@ -5512,9 +5512,17 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7998038612151709839, guid: 92aec168febb01e4bbd551e9f445f5e1, type: 3}
+      propertyPath: fullChargeSound
+      value: 
+      objectReference: {fileID: 8300000, guid: c4cfffc3ccb73724184ae2243023ac61, type: 3}
+    - target: {fileID: 7998038612151709839, guid: 92aec168febb01e4bbd551e9f445f5e1, type: 3}
       propertyPath: laserNukePrefab
       value: 
       objectReference: {fileID: 5966435608419081106, guid: 52a6afaada9c458498670ed8ae5383f9, type: 3}
+    - target: {fileID: 7998038612151709839, guid: 92aec168febb01e4bbd551e9f445f5e1, type: 3}
+      propertyPath: nukeLaunchSound
+      value: 
+      objectReference: {fileID: 8300000, guid: c4cfffc3ccb73724184ae2243023ac61, type: 3}
     - target: {fileID: 7999969800494371920, guid: 92aec168febb01e4bbd551e9f445f5e1, type: 3}
       propertyPath: m_Name
       value: Resized-Nuke
@@ -82607,6 +82615,18 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1671779703182471358, guid: 52a6afaada9c458498670ed8ae5383f9, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 3.5132923
+      objectReference: {fileID: 0}
+    - target: {fileID: 1671779703182471358, guid: 52a6afaada9c458498670ed8ae5383f9, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 3.5132923
+      objectReference: {fileID: 0}
+    - target: {fileID: 1671779703182471358, guid: 52a6afaada9c458498670ed8ae5383f9, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 3.5132923
+      objectReference: {fileID: 0}
     - target: {fileID: 1671779703182471358, guid: 52a6afaada9c458498670ed8ae5383f9, type: 3}
       propertyPath: m_LocalPosition.x
       value: -15.211926
